@@ -4,7 +4,6 @@ import {
   attOf,
   buildNotice,
   compute,
-  courtCount,
   ctxFee,
   ctxOpen,
   effectiveSlots,
@@ -13,7 +12,6 @@ import {
   LV,
   lockSlots,
   mmdd,
-  rate,
   sessById,
   slotLabel,
   wd,
@@ -51,7 +49,6 @@ export default function SessionView() {
   }, [s, setUi]);
   if (!s) return null;
 
-  const r = rate(state.settings);
   const c = compute(state, s);
   const ss = effectiveSlots(state, s);
   const allIds = ss.map((x) => x.id);
@@ -124,8 +121,6 @@ export default function SessionView() {
     });
   }
 
-  const totalCourts = ss.reduce((a, sl) => a + courtCount(sl), 0);
-
   return (
     <>
       <div className="topbar">
@@ -142,35 +137,39 @@ export default function SessionView() {
       <div className="screen has-bar">
         {/* 打球時段 */}
         <div className="card">
-          <div className="clabel">
-            打球時段<span className="r num">${fmt(c.feeTotal)}</span>
-          </div>
+          <div className="clabel">打球時段</div>
           {ss.length ? (
             ss.map((sl) => (
               <div className="slot-blk" key={sl.id}>
                 <div className="slot-head">
                   <span className="slot-time num">{slotLabel(sl.start)}</span>
-                  <span className="slot-fee num">{fmt((sl.courts?.length || 0) * r)}</span>
                 </div>
                 <div className="court-row">
-                  {(sl.courts || []).map((cn, ci) => (
-                    <span className="court-chip" key={ci}>
-                      <input
-                        className="court-in num"
-                        type="text"
-                        inputMode="numeric"
-                        aria-label="場地號碼"
-                        value={cn}
-                        onChange={(e) => editCourt(sl.id, ci, e.target.value)}
-                      />
-                      <span className="court-suffix">號</span>
-                      {(sl.courts || []).length > 1 && (
-                        <button className="court-x" aria-label="移除場地" onClick={() => delCourt(sl.id, ci)}>
-                          ×
-                        </button>
-                      )}
-                    </span>
-                  ))}
+                  {(sl.courts || [])
+                    .map((cn, ci) => ({ cn, ci }))
+                    .sort((a, b) => (parseInt(a.cn, 10) || 0) - (parseInt(b.cn, 10) || 0))
+                    .map(({ cn, ci }) => (
+                      <span className="court-chip" key={ci}>
+                        <input
+                          className="court-in num"
+                          type="text"
+                          inputMode="numeric"
+                          aria-label="場地號碼"
+                          value={cn}
+                          onChange={(e) => editCourt(sl.id, ci, e.target.value)}
+                        />
+                        <span className="court-suffix">號</span>
+                        {(sl.courts || []).length > 1 && (
+                          <button
+                            className="court-x"
+                            aria-label="移除場地"
+                            onClick={() => delCourt(sl.id, ci)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    ))}
                   <button className="add-court" onClick={() => addCourt(sl.id)}>
                     ＋ 加場地
                   </button>
@@ -182,22 +181,16 @@ export default function SessionView() {
               尚未安排時段，到設定裡調整預設時段就會自動帶進來。
             </div>
           )}
-          <div className="fee-total">
-            <span>
-              場地費合計（{totalCourts} 場 × ${fmt(r)}）
-            </span>
-            <b className="num">${fmt(c.feeTotal)}</b>
-          </div>
           <div className="notice-btn-wrap">
             <button
               className="btn btn-ghost btn-block"
               onClick={() =>
                 copyText(buildNotice(state.settings.tplOpen, ctxOpen(state, s)), () =>
-                  toast("開打通知已複製，貼到群組吧"),
+                  toast("場地通知已複製"),
                 )
               }
             >
-              📢 產生開打通知
+              📢 複製場地通知
             </button>
           </div>
         </div>

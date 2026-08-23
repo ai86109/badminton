@@ -3,8 +3,7 @@ import type { AppState, Att, Member, SessionRec, Settings, Slot } from "./types"
 export const WD = ["日", "一", "二", "三", "四", "五", "六"];
 export const LV: Record<string, string> = { fixed: "固定", floating: "非固定" };
 
-export const TPL_OPEN =
-  "🏸 {日期}（週{星期}）開打！\n{時段清單}\n———\n出席 {出席人數} 人：{出席名單}\n請假 {請假人數} 人：{請假名單}\n———\n記得準時到場 💪";
+export const TPL_OPEN = "{日期}\n{時段清單}";
 export const TPL_FEE =
   "🏸 {日期}（週{星期}）收費\n{費用摘要}｜{人數} 人\n———\n{收費明細}\n———\n應收合計 ${合計}\n（含隊費結餘 ${結餘}）\n請盡快轉帳給隊長 🙏";
 
@@ -125,6 +124,10 @@ export function courtCount(sl: Slot): number {
 export function courtText(sl: Slot): string {
   return sl.courts && sl.courts.length ? sl.courts.join("、") + " 號" : "";
 }
+/** Court numbers sorted numerically (for display). */
+export function sortCourts(courts: string[]): string[] {
+  return (courts || []).slice().sort((a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0));
+}
 export function spanLabel(s: SessionRec): string {
   const ss = sortedSlots(s);
   if (!ss.length) return "打球日";
@@ -234,7 +237,7 @@ export function pastPlays(state: AppState, n: number): string[] {
 export function daySlotLines(state: AppState, iso: string): { t: string; c: string }[] {
   const r = sessById(state, iso);
   const slots = r ? effectiveSlots(state, r) : settingsSlots(state.settings);
-  return slots.map((sl) => ({ t: slotLabel(sl.start), c: (sl.courts || []).join("、") }));
+  return slots.map((sl) => ({ t: slotLabel(sl.start), c: sortCourts(sl.courts || []).join("、") }));
 }
 
 // ---- attendance ----
@@ -322,9 +325,9 @@ export function ctxOpen(state: AppState, s: SessionRec): Record<string, any> {
   const allIds = ss.map((x) => x.id);
   const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
   const lv = state.members.filter((m) => attOf(s, m.id, allIds).status === "leave");
-  const lines = (ss.length ? ss : [{ start: "", courts: [] } as unknown as Slot]).map((sl) => {
-    const ct = courtText(sl as Slot);
-    return "・" + slotLabel((sl as Slot).start) + (ct ? "　" + ct : "");
+  const lines = ss.map((sl) => {
+    const cts = sortCourts(sl.courts || []);
+    return sl.start + " - " + endTime(sl.start) + (cts.length ? " 場地 " + cts.join("+") : "");
   });
   return {
     日期: mmdd(s.date),
@@ -378,7 +381,7 @@ export function sampleCtx(state: AppState, kind: "open" | "fee"): Record<string,
       時段清單: state.settings.defaultSlots
         .slice()
         .sort()
-        .map((st) => "・" + slotLabel(st) + (state.settings.defaultCourt ? "　" + state.settings.defaultCourt + " 號" : ""))
+        .map((st) => st + " - " + endTime(st) + (state.settings.defaultCourt ? " 場地 " + state.settings.defaultCourt : ""))
         .join("\n"),
       出席人數: 6,
       出席名單: "小明、阿華、婷婷、阿凱、小美、Kevin",
