@@ -184,7 +184,7 @@
   .empty{text-align:center;color:var(--muted);font-size:13.5px;padding:30px 16px;}
   .foot{text-align:center;color:var(--faint);font-size:11px;padding:20px 16px 6px;line-height:1.7;}
 
-  .actionbar{position:fixed;left:0;right:0;bottom:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);box-shadow:var(--shadow-lift);z-index:18;}
+  .actionbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);box-shadow:var(--shadow-lift);z-index:18;padding-bottom:env(safe-area-inset-bottom);}
   .actionbar-inner{max-width:520px;margin:0 auto;padding:11px 16px;}
   .sum-grid{display:flex;align-items:stretch;gap:12px;}
   .sum-block{flex:1;}
