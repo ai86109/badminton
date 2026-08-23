@@ -41,6 +41,8 @@ export function migrate(raw: any): AppState {
     s.slots.forEach((sl) => {
       if (!Array.isArray(sl.courts)) sl.courts = [];
     });
+    s.locked = !!s.locked || Object.keys(s.attend).length > 0 || Object.keys(s.paid).length > 0;
+    if (!s.locked) s.slots = [];
   });
   return st;
 }
@@ -133,11 +135,29 @@ export function settingsSpan(settings: Settings): string {
   if (!a.length) return "打球日";
   return a[0] + "–" + endTime(a[a.length - 1]);
 }
-export function newSlots(settings: Settings): Slot[] {
+/** Slots derived live from the current settings. Deterministic ids (= start time). */
+export function settingsSlots(settings: Settings): Slot[] {
   return settings.defaultSlots
     .slice()
     .sort()
-    .map((st) => ({ id: uid(), start: st, courts: [String(settings.defaultCourt || "1")] }));
+    .map((st) => ({ id: st, start: st, courts: [String(settings.defaultCourt || "1")] }));
+}
+
+/**
+ * The slots a session actually uses right now: its own frozen slots once it is
+ * locked, otherwise the current settings' default slots (so untouched days
+ * follow settings automatically).
+ */
+export function effectiveSlots(state: AppState, s: SessionRec): Slot[] {
+  return s.locked ? sortedSlots(s) : settingsSlots(state.settings);
+}
+
+/** Freeze the current effective slots onto the session (first edit / first record). */
+export function lockSlots(state: AppState, s: SessionRec): void {
+  if (!s.locked) {
+    s.slots = settingsSlots(state.settings);
+    s.locked = true;
+  }
 }
 
 // ---- sessions / calendar ----
@@ -162,18 +182,8 @@ export function hasData(r: SessionRec | null): boolean {
 export function ensureDay(state: AppState, iso: string): SessionRec {
   let r = sessById(state, iso);
   if (!r) {
-    const status = defaultStatus(state, iso);
-    r = {
-      id: iso,
-      date: iso,
-      status,
-      slots: status === "play" ? newSlots(state.settings) : [],
-      attend: {},
-      paid: {},
-    };
+    r = { id: iso, date: iso, status: defaultStatus(state, iso), slots: [], attend: {}, paid: {} };
     state.sessions.push(r);
-  } else if (r.status === "play" && (!r.slots || !r.slots.length)) {
-    r.slots = newSlots(state.settings);
   }
   return r;
 }
@@ -184,19 +194,11 @@ export function toggleDay(state: AppState, iso: string): void {
   const cur = r ? r.status : def;
   const nw = cur === "play" ? "rest" : "play";
   if (!r) {
-    state.sessions.push({
-      id: iso,
-      date: iso,
-      status: nw,
-      slots: nw === "play" ? newSlots(state.settings) : [],
-      attend: {},
-      paid: {},
-    });
+    state.sessions.push({ id: iso, date: iso, status: nw, slots: [], attend: {}, paid: {} });
     return;
   }
   r.status = nw;
-  if (nw === "play" && (!r.slots || !r.slots.length)) r.slots = newSlots(state.settings);
-  if (nw === def && !hasData(r)) {
+  if (nw === def && !hasData(r) && !r.locked) {
     state.sessions = state.sessions.filter((x) => x.id !== iso);
   }
 }
@@ -231,17 +233,13 @@ export function pastPlays(state: AppState, n: number): string[] {
 }
 export function daySlotLines(state: AppState, iso: string): { t: string; c: string }[] {
   const r = sessById(state, iso);
-  return r && r.slots && r.slots.length
-    ? sortedSlots(r).map((sl) => ({ t: slotLabel(sl.start), c: (sl.courts || []).join("、") }))
-    : state.settings.defaultSlots
-        .slice()
-        .sort()
-        .map((st) => ({ t: slotLabel(st), c: String(state.settings.defaultCourt || "") }));
+  const slots = r ? effectiveSlots(state, r) : settingsSlots(state.settings);
+  return slots.map((sl) => ({ t: slotLabel(sl.start), c: (sl.courts || []).join("、") }));
 }
 
 // ---- attendance ----
-export function attOf(s: SessionRec, id: string): Att {
-  return s.attend[id] || { status: "in", slots: s.slots.map((x) => x.id) };
+export function attOf(s: SessionRec, id: string, allSlotIds: string[]): Att {
+  return s.attend[id] || { status: "in", slots: allSlotIds };
 }
 
 export interface Computed {
@@ -274,15 +272,17 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
   };
   if (!s) return res;
   const r = rate(state.settings);
-  const ins = state.members.filter((m) => attOf(s, m.id).status === "in");
+  const slots = effectiveSlots(state, s);
+  const allIds = slots.map((x) => x.id);
+  const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
   res.inCount = ins.length;
-  res.leaveCount = state.members.filter((m) => attOf(s, m.id).status === "leave").length;
+  res.leaveCount = state.members.filter((m) => attOf(s, m.id, allIds).status === "leave").length;
   const base: Record<string, number> = {};
   ins.forEach((m) => (base[m.id] = 0));
-  s.slots.forEach((sl) => {
+  slots.forEach((sl) => {
     const slotFee = courtCount(sl) * r;
     res.feeTotal += slotFee;
-    const here = ins.filter((m) => (attOf(s, m.id).slots || []).indexOf(sl.id) >= 0);
+    const here = ins.filter((m) => (attOf(s, m.id, allIds).slots || []).indexOf(sl.id) >= 0);
     if (!here.length) return;
     const share = slotFee / here.length;
     here.forEach((m) => (base[m.id] += share));
@@ -318,9 +318,10 @@ export function buildNotice(tpl: string, ctx: Record<string, any>): string {
     .join("\n");
 }
 export function ctxOpen(state: AppState, s: SessionRec): Record<string, any> {
-  const ins = state.members.filter((m) => attOf(s, m.id).status === "in");
-  const lv = state.members.filter((m) => attOf(s, m.id).status === "leave");
-  const ss = sortedSlots(s);
+  const ss = effectiveSlots(state, s);
+  const allIds = ss.map((x) => x.id);
+  const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
+  const lv = state.members.filter((m) => attOf(s, m.id, allIds).status === "leave");
   const lines = (ss.length ? ss : [{ start: "", courts: [] } as unknown as Slot]).map((sl) => {
     const ct = courtText(sl as Slot);
     return "・" + slotLabel((sl as Slot).start) + (ct ? "　" + ct : "");
@@ -338,12 +339,13 @@ export function ctxOpen(state: AppState, s: SessionRec): Record<string, any> {
 }
 export function ctxFee(state: AppState, s: SessionRec): Record<string, any> {
   const c = compute(state, s);
-  const ins = state.members.filter((m) => attOf(s, m.id).status === "in");
-  const ss = sortedSlots(s);
+  const ss = effectiveSlots(state, s);
+  const allIds = ss.map((x) => x.id);
+  const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
   const detail = ins
     .map((m) => {
       if (m.level === "fixed") return "・" + m.name + "（隊費）";
-      const a = attOf(s, m.id);
+      const a = attOf(s, m.id, allIds);
       let note = "";
       if (ss.length > 1 && (a.slots || []).length < ss.length)
         note =

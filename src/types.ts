@@ -23,6 +23,13 @@ export interface SessionRec {
   id: string; // = date "YYYY-MM-DD"
   date: string;
   status: "play" | "rest";
+  /**
+   * When `locked` is false/absent the session has never been used, so its time
+   * slots follow the current settings live. The first time someone edits its
+   * courts or records attendance it "locks in": `slots` is frozen and future
+   * settings changes no longer affect this day.
+   */
+  locked?: boolean;
   slots: Slot[];
   attend: Record<string, Att>;
   paid: Record<string, boolean>;

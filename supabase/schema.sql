@@ -30,8 +30,11 @@ create table if not exists public.members (
 create table if not exists public.sessions (
   date       date primary key,
   status     text not null default 'play' check (status in ('play','rest')),
+  locked     boolean not null default false,   -- 一旦這天開始點名/改場地就定型，之後改設定不影響它
   created_at timestamptz not null default now()
 );
+-- 若表已存在（之前建過），補上 locked 欄位：
+alter table public.sessions add column if not exists locked boolean not null default false;
 
 -- 4) 時段（場次底下的每個 1 小時時段；id 由前端產生）
 create table if not exists public.session_slots (

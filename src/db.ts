@@ -116,6 +116,7 @@ export async function loadAll(): Promise<AppState> {
     (attByDate[a.session_date] ||= []).push(a);
   });
 
+  const staleSlotDates: string[] = [];
   const sessions: SessionRec[] = (seRes.data || []).map((s: any) => {
     const attend: SessionRec["attend"] = {};
     const paid: SessionRec["paid"] = {};
@@ -123,15 +124,33 @@ export async function loadAll(): Promise<AppState> {
       attend[a.member_id] = { status: a.status, slots: a.slots || [] };
       if (a.paid) paid[a.member_id] = true;
     });
-    return {
+    const stored = slotsByDate[s.date] || [];
+    const rec: SessionRec = {
       id: s.date,
       date: s.date,
       status: s.status,
-      slots: slotsByDate[s.date] || [],
+      // `locked` column may be absent on legacy rows → fall back to "has data".
+      locked: !!s.locked || Object.keys(attend).length > 0 || Object.keys(paid).length > 0,
+      slots: stored,
       attend,
       paid,
     };
+    // Untouched (unlocked) days follow the current settings, so drop any stale
+    // snapshot slots left from before this day was used.
+    if (!rec.locked) {
+      if (stored.length) staleSlotDates.push(s.date);
+      rec.slots = [];
+    }
+    return rec;
   });
+
+  // one-time cleanup of orphaned slots for unlocked days
+  if (staleSlotDates.length) {
+    const sb = supabase;
+    staleSlotDates.forEach((d) => {
+      sb.from("session_slots").delete().eq("session_date", d);
+    });
+  }
 
   return { settings, members, sessions };
 }
@@ -170,13 +189,15 @@ export function applyChanges(prev: AppState, next: AppState): void {
   const nextS = new Map(next.sessions.map((s) => [s.date, s]));
   next.sessions.forEach((s) => {
     const p = prevS.get(s.date);
-    if (!p || p.status !== s.status)
-      ops.push(sb.from("sessions").upsert({ date: s.date, status: s.status }));
+    if (!p || p.status !== s.status || !!p.locked !== !!s.locked)
+      ops.push(sb.from("sessions").upsert({ date: s.date, status: s.status, locked: !!s.locked }));
 
-    // slots
-    const pSlots = new Map((p?.slots || []).map((sl) => [sl.id, sl]));
-    const nSlots = new Map(s.slots.map((sl) => [sl.id, sl]));
-    s.slots.forEach((sl) => {
+    // slots — only persisted for locked days; unlocked days follow settings live
+    const nextSlots = s.locked ? s.slots : [];
+    const prevSlots = p && p.locked ? p.slots : [];
+    const pSlots = new Map(prevSlots.map((sl) => [sl.id, sl]));
+    const nSlots = new Map(nextSlots.map((sl) => [sl.id, sl]));
+    nextSlots.forEach((sl) => {
       const pp = pSlots.get(sl.id);
       if (!pp || pp.start !== sl.start || JSON.stringify(pp.courts) !== JSON.stringify(sl.courts))
         ops.push(
@@ -188,13 +209,13 @@ export function applyChanges(prev: AppState, next: AppState): void {
           }),
         );
     });
-    (p?.slots || []).forEach((sl) => {
+    prevSlots.forEach((sl) => {
       if (!nSlots.has(sl.id)) ops.push(sb.from("session_slots").delete().eq("id", sl.id));
     });
 
     // attendance
-    const allSlotIds = s.slots.map((x) => x.id);
-    const prevRows = desiredAttRows(p, (p?.slots || []).map((x) => x.id));
+    const allSlotIds = nextSlots.map((x) => x.id);
+    const prevRows = desiredAttRows(p, prevSlots.map((x) => x.id));
     const nextRows = desiredAttRows(s, allSlotIds);
     const prevR = new Map(prevRows.map((r) => [r.member_id, r]));
     const nextR = new Map(nextRows.map((r) => [r.member_id, r]));

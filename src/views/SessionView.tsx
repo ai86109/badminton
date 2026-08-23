@@ -7,14 +7,15 @@ import {
   courtCount,
   ctxFee,
   ctxOpen,
+  effectiveSlots,
+  endTime,
   fmt,
   LV,
+  lockSlots,
   mmdd,
   rate,
   sessById,
   slotLabel,
-  sortedSlots,
-  spanLabel,
   wd,
 } from "../logic";
 
@@ -52,18 +53,28 @@ export default function SessionView() {
 
   const r = rate(state.settings);
   const c = compute(state, s);
-  const ss = sortedSlots(s);
+  const ss = effectiveSlots(state, s);
+  const allIds = ss.map((x) => x.id);
   const paidCount = c.paidCount;
+  const headSpan = ss.length ? ss[0].start + "–" + endTime(ss[ss.length - 1].start) : "打球日";
+
+  const findSess = (st: typeof state) => st.sessions.find((x) => x.id === s!.id);
 
   function editCourt(slotId: string, i: number, val: string) {
     update((st) => {
-      const sl = st.sessions.find((x) => x.id === s!.id)?.slots.find((x) => x.id === slotId);
+      const sess = findSess(st);
+      if (!sess) return;
+      lockSlots(st, sess);
+      const sl = sess.slots.find((x) => x.id === slotId);
       if (sl && sl.courts) sl.courts[i] = val;
     });
   }
   function addCourt(slotId: string) {
     update((st) => {
-      const sl = st.sessions.find((x) => x.id === s!.id)?.slots.find((x) => x.id === slotId);
+      const sess = findSess(st);
+      if (!sess) return;
+      lockSlots(st, sess);
+      const sl = sess.slots.find((x) => x.id === slotId);
       if (!sl) return;
       if (!sl.courts) sl.courts = [];
       const nums = sl.courts.map((x) => parseInt(x, 10)).filter((n) => !isNaN(n));
@@ -73,25 +84,31 @@ export default function SessionView() {
   }
   function delCourt(slotId: string, i: number) {
     update((st) => {
-      const sl = st.sessions.find((x) => x.id === s!.id)?.slots.find((x) => x.id === slotId);
+      const sess = findSess(st);
+      if (!sess) return;
+      lockSlots(st, sess);
+      const sl = sess.slots.find((x) => x.id === slotId);
       if (sl && sl.courts && sl.courts.length > 1) sl.courts.splice(i, 1);
     });
   }
   function toggleAtt(id: string) {
     update((st) => {
-      const sess = st.sessions.find((x) => x.id === s!.id);
+      const sess = findSess(st);
       if (!sess) return;
-      const cur = attOf(sess, id).status;
+      lockSlots(st, sess);
+      const ids = sess.slots.map((x) => x.id);
+      const cur = attOf(sess, id, ids).status;
       sess.attend[id] =
-        cur === "in" ? { status: "leave", slots: [] } : { status: "in", slots: sess.slots.map((x) => x.id) };
+        cur === "in" ? { status: "leave", slots: [] } : { status: "in", slots: ids };
     });
   }
   function toggleSlot(memberId: string, slotId: string) {
     update((st) => {
-      const sess = st.sessions.find((x) => x.id === s!.id);
+      const sess = findSess(st);
       if (!sess) return;
-      if (!sess.attend[memberId])
-        sess.attend[memberId] = { status: "in", slots: sess.slots.map((x) => x.id) };
+      lockSlots(st, sess);
+      const ids = sess.slots.map((x) => x.id);
+      if (!sess.attend[memberId]) sess.attend[memberId] = { status: "in", slots: ids };
       const arr = sess.attend[memberId].slots;
       const idx = arr.indexOf(slotId);
       if (idx >= 0) arr.splice(idx, 1);
@@ -100,8 +117,9 @@ export default function SessionView() {
   }
   function togglePaid(id: string) {
     update((st) => {
-      const sess = st.sessions.find((x) => x.id === s!.id);
+      const sess = findSess(st);
       if (!sess) return;
+      lockSlots(st, sess);
       sess.paid[id] = !sess.paid[id];
     });
   }
@@ -118,7 +136,7 @@ export default function SessionView() {
           <h1>
             {mmdd(s.date)}（週{wd(s.date)}）
           </h1>
-          <p>{spanLabel(s)}</p>
+          <p>{headSpan}</p>
         </div>
       </div>
       <div className="screen has-bar">
@@ -198,7 +216,7 @@ export default function SessionView() {
             </div>
           )}
           {state.members.map((m) => {
-            const a = attOf(s, m.id);
+            const a = attOf(s, m.id, allIds);
             const isIn = a.status === "in";
             const lvcls = m.level === "fixed" ? "fixed" : "";
             return (

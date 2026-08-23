@@ -221,6 +221,8 @@
   .cal-cell.play:hover{background:var(--accent-ink);}
   .cal-cell.off{color:var(--faint);text-decoration:line-through;background:var(--rest-soft);border-style:dashed;}
   .cal-cell.today{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent);}
+  .cal-cell.past{opacity:.38;cursor:default;}
+  .cal-cell.past:hover{border-color:var(--border);}
   .cal-legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;justify-content:center;}
   .cal-legend .lg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:700;}
   .cal-legend .dot{width:15px;height:15px;border-radius:5px;display:inline-block;}

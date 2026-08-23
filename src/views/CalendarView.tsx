@@ -15,8 +15,6 @@ export default function CalendarView() {
   for (let d = 1; d <= dim; d++) cells.push(d);
   while (cells.length % 7) cells.push(0);
 
-  const wkName = WD[+state.settings.playWeekday];
-
   function prev() {
     let nm = m - 1;
     let ny = y;
@@ -47,7 +45,7 @@ export default function CalendarView() {
         </button>
         <div>
           <h1>編輯日曆</h1>
-          <p>點日期切換 打／不打</p>
+          <p>點日期切換 會打／不打</p>
         </div>
       </div>
       <div className="screen no-nav">
@@ -75,11 +73,18 @@ export default function CalendarView() {
             const iso = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
             const st = effStatus(state, iso);
             const def = defaultStatus(state, iso);
+            const isPast = iso < today;
             let cls = "cal-cell";
             if (st === "play") cls += " play";
             if (def === "play" && st === "rest") cls += " off";
             if (iso === today) cls += " today";
-            return (
+            if (isPast) cls += " past";
+            // 已過去的日期只顯示狀態，不能再切換打/不打
+            return isPast ? (
+              <div className={cls} key={i}>
+                {d}
+              </div>
+            ) : (
               <button className={cls} key={i} onClick={() => tap(iso)}>
                 {d}
               </button>
@@ -89,11 +94,11 @@ export default function CalendarView() {
         <div className="cal-legend">
           <span className="lg">
             <i className="dot play" />
-            打
+            打球
           </span>
           <span className="lg">
             <i className="dot off" />
-            沒打
+            休息
           </span>
           <span className="lg">
             <i className="dot today" />
