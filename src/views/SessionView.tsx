@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import {
   attOf,
   buildNotice,
+  cloneRoster,
   compute,
   ctxFee,
   ctxOpen,
@@ -12,8 +13,10 @@ import {
   LV,
   lockSlots,
   mmdd,
+  rosterOf,
   sessById,
   slotLabel,
+  uid,
   wd,
 } from "../logic";
 
@@ -42,6 +45,7 @@ async function copyText(text: string, ok: () => void) {
 
 export default function SessionView() {
   const { state, update, ui, setUi, toast } = useStore();
+  const [tempName, setTempName] = useState("");
   const s = ui.openId ? sessById(state, ui.openId) : null;
 
   useEffect(() => {
@@ -54,6 +58,7 @@ export default function SessionView() {
   const allIds = ss.map((x) => x.id);
   const paidCount = c.paidCount;
   const headSpan = ss.length ? ss[0].start + "–" + endTime(ss[ss.length - 1].start) : "打球日";
+  const liveIds = new Set(state.members.map((m) => m.id));
 
   const findSess = (st: typeof state) => st.sessions.find((x) => x.id === s!.id);
 
@@ -118,6 +123,27 @@ export default function SessionView() {
       if (!sess) return;
       lockSlots(st, sess);
       sess.paid[id] = !sess.paid[id];
+    });
+  }
+  function addTemp() {
+    const n = tempName.trim();
+    if (!n) return;
+    update((st) => {
+      const sess = findSess(st);
+      if (!sess) return;
+      lockSlots(st, sess);
+      if (!sess.roster || !sess.roster.length) sess.roster = cloneRoster(st.members);
+      sess.roster.push({ id: uid(), name: n, level: "floating" });
+    });
+    setTempName("");
+  }
+  function delTemp(id: string) {
+    update((st) => {
+      const sess = findSess(st);
+      if (!sess) return;
+      if (sess.roster) sess.roster = sess.roster.filter((m) => m.id !== id);
+      delete sess.attend[id];
+      delete sess.paid[id];
     });
   }
 
@@ -203,16 +229,17 @@ export default function SessionView() {
               出席 {c.inCount} · 請假 {c.leaveCount}
             </span>
           </div>
-          {state.members.length === 0 && (
+          {rosterOf(state, s).length === 0 && (
             <div style={{ fontSize: 13, color: "var(--muted)" }}>
               還沒有成員，先到「成員」分頁加人。
             </div>
           )}
-          {[...state.members]
+          {[...rosterOf(state, s)]
             .sort((a, b) => (a.level === "fixed" ? 0 : 1) - (b.level === "fixed" ? 0 : 1))
             .map((m) => {
             const a = attOf(s, m.id, allIds);
             const isIn = a.status === "in";
+            const isTemp = !liveIds.has(m.id);
             const lvcls = m.level === "fixed" ? "fixed" : "";
             return (
               <div className="prow" key={m.id}>
@@ -221,7 +248,17 @@ export default function SessionView() {
                 </button>
                 <div className="p-body">
                   <div className="p-name">
-                    {m.name} <span className={"lvtag " + lvcls}>{LV[m.level]}</span>
+                    {m.name}{" "}
+                    {isTemp ? (
+                      <span className="lvtag temp">臨時</span>
+                    ) : (
+                      <span className={"lvtag " + lvcls}>{LV[m.level]}</span>
+                    )}
+                    {isTemp && (
+                      <button className="temp-x" aria-label="移除臨時成員" onClick={() => delTemp(m.id)}>
+                        移除
+                      </button>
+                    )}
                   </div>
                   {isIn && ss.length > 1 && (
                     <div className="slot-chips">
@@ -255,6 +292,18 @@ export default function SessionView() {
               </div>
             );
           })}
+          <div className="temp-add">
+            <input
+              type="text"
+              placeholder="臨時成員名字"
+              autoComplete="off"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+            />
+            <button className="btn btn-ghost" onClick={addTemp}>
+              ＋ 臨時成員
+            </button>
+          </div>
         </div>
       </div>
 

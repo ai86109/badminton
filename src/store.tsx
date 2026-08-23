@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { AppState, UIState } from "./types";
+import { normalizeRosters } from "./logic";
 import { applyChanges, loadAll, subscribeRealtime } from "./db";
 
 interface StoreCtx {
@@ -99,6 +100,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!prev) return prev;
       const next = structuredClone(prev) as AppState;
       mutator(next);
+      normalizeRosters(next);
       return next;
     });
   }, []);

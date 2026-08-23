@@ -30,6 +30,14 @@ export interface SessionRec {
    * settings changes no longer affect this day.
    */
   locked?: boolean;
+  /**
+   * Frozen roster snapshot for a recorded day. Once `locked` and the day has
+   * passed, this list (who was on the team, and their level) is fixed, so later
+   * adding/removing/renaming members never rewrites a past day's headcount or
+   * money. Days that are today or in the future keep it synced to the live
+   * roster; unlocked days have no snapshot and follow the live roster.
+   */
+  roster?: Member[];
   slots: Slot[];
   attend: Record<string, Att>;
   paid: Record<string, boolean>;

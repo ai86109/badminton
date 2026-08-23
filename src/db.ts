@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { defaultSettings, migrate, seedState, TPL_FEE, TPL_OPEN } from "./logic";
+import { defaultSettings, migrate, normalizeRosters, seedState, TPL_FEE, TPL_OPEN } from "./logic";
 import type { AppState, Member, SessionRec, Settings, Slot } from "./types";
 
 const LS_KEY = "badminton-captain-shared-v1";
@@ -131,6 +131,7 @@ export async function loadAll(): Promise<AppState> {
       status: s.status,
       // `locked` column may be absent on legacy rows → fall back to "has data".
       locked: !!s.locked || Object.keys(attend).length > 0 || Object.keys(paid).length > 0,
+      roster: Array.isArray(s.roster) && s.roster.length ? s.roster : undefined,
       slots: stored,
       attend,
       paid,
@@ -152,7 +153,10 @@ export async function loadAll(): Promise<AppState> {
     });
   }
 
-  return { settings, members, sessions };
+  const st = { settings, members, sessions };
+  // freeze/sync roster snapshots (past days stay frozen, today/future follow live)
+  normalizeRosters(st);
+  return st;
 }
 
 // ---------------- save (diff prev -> next, write only what changed) ----------------
@@ -189,8 +193,16 @@ export function applyChanges(prev: AppState, next: AppState): void {
   const nextS = new Map(next.sessions.map((s) => [s.date, s]));
   next.sessions.forEach((s) => {
     const p = prevS.get(s.date);
-    if (!p || p.status !== s.status || !!p.locked !== !!s.locked)
-      ops.push(sb.from("sessions").upsert({ date: s.date, status: s.status, locked: !!s.locked }));
+    const rosterVal = s.roster ?? null;
+    if (
+      !p ||
+      p.status !== s.status ||
+      !!p.locked !== !!s.locked ||
+      JSON.stringify(p.roster ?? null) !== JSON.stringify(rosterVal)
+    )
+      ops.push(
+        sb.from("sessions").upsert({ date: s.date, status: s.status, locked: !!s.locked, roster: rosterVal }),
+      );
 
     // slots — only persisted for locked days; unlocked days follow settings live
     const nextSlots = s.locked ? s.slots : [];

@@ -138,6 +138,11 @@
   .lvtag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--surface-3);color:var(--muted);}
   .lvtag.temp{background:var(--warn-soft);color:var(--warn);}
   .lvtag.fixed{background:var(--accent-soft);color:var(--accent-ink);}
+  .temp-x{margin-left:2px;font-size:11px;font-weight:700;color:var(--muted);background:transparent;border:none;padding:2px 4px;cursor:pointer;width:auto;}
+  .temp-x:hover{color:var(--warn);}
+  .temp-add{display:flex;gap:9px;margin-top:13px;padding-top:13px;border-top:1px solid var(--border);}
+  .temp-add input{flex:1 1 auto;}
+  .temp-add .btn{flex:0 0 auto;white-space:nowrap;}
   .slot-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
   .schip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer;user-select:none;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);transition:.12s;}
   .schip.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent;}
@@ -156,9 +161,11 @@
 
   .mrow{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--border);}
   .mrow:first-of-type{border-top:none;}
-  .mrow .mname{flex:1 1 auto;font-weight:700;font-size:15px;}
-  .lvseg{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px;}
-  .lvseg button{font-size:11.5px;font-weight:700;color:var(--muted);background:transparent;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;transition:.12s;}
+  .mrow .mname{flex:1 1 auto;min-width:0;min-height:0;font-weight:700;font-size:15px;line-height:1.35;background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 9px;margin:-7px 0 -7px -9px;color:var(--ink);font-family:inherit;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;}
+  .mrow .mname:hover{border-color:var(--border);}
+  .mrow .mname:focus{outline:none;border-color:var(--accent);background:var(--surface-2);}
+  .lvseg{flex:0 0 auto;display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px;}
+  .lvseg button{white-space:nowrap;font-size:11.5px;font-weight:700;color:var(--muted);background:transparent;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;transition:.12s;}
   .lvseg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08);}
 
   .exp-row{display:flex;gap:9px;align-items:center;margin-bottom:9px;}

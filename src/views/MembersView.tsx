@@ -1,9 +1,41 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../store";
 import { uid } from "../logic";
 import type { Level } from "../types";
 
 const ORDER: Record<string, number> = { fixed: 0, floating: 1 };
+
+/** Single-line-looking name field that wraps and grows when a name is long. */
+function NameField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const fit = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  };
+  useLayoutEffect(fit, [value]);
+  useEffect(() => {
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+  return (
+    <textarea
+      ref={ref}
+      className="mname"
+      rows={1}
+      aria-label="成員名字"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          (e.target as HTMLTextAreaElement).blur();
+        }
+      }}
+    />
+  );
+}
 
 export default function MembersView() {
   const { state, update } = useStore();
@@ -26,6 +58,12 @@ export default function MembersView() {
     update((s) => {
       const m = s.members.find((x) => x.id === id);
       if (m) m.level = lv;
+    });
+  }
+  function rename(id: string, val: string) {
+    update((s) => {
+      const m = s.members.find((x) => x.id === id);
+      if (m) m.name = val;
     });
   }
   function del(id: string) {
@@ -53,7 +91,7 @@ export default function MembersView() {
           {ms.length ? (
             ms.map((m) => (
               <div className="mrow" key={m.id}>
-                <div className="mname">{m.name}</div>
+                <NameField value={m.name} onChange={(v) => rename(m.id, v)} />
                 <div className="lvseg">
                   <button className={m.level === "fixed" ? "on" : ""} onClick={() => setLvl(m.id, "fixed")}>
                     固定
@@ -77,9 +115,6 @@ export default function MembersView() {
               autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") add();
-              }}
             />
             <select value={level} onChange={(e) => setLevel(e.target.value as Level)}>
               <option value="fixed">固定</option>

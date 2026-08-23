@@ -31,10 +31,12 @@ create table if not exists public.sessions (
   date       date primary key,
   status     text not null default 'play' check (status in ('play','rest')),
   locked     boolean not null default false,   -- 一旦這天開始點名/改場地就定型，之後改設定不影響它
+  roster     jsonb,                             -- 已記錄場次的成員名單快照；過去的場次凍結，不受之後增減成員影響
   created_at timestamptz not null default now()
 );
--- 若表已存在（之前建過），補上 locked 欄位：
+-- 若表已存在（之前建過），補上欄位：
 alter table public.sessions add column if not exists locked boolean not null default false;
+alter table public.sessions add column if not exists roster jsonb;
 
 -- 4) 時段（場次底下的每個 1 小時時段；id 由前端產生）
 create table if not exists public.session_slots (
@@ -47,9 +49,12 @@ create index if not exists idx_session_slots_date on public.session_slots(sessio
 
 -- 5) 出席 & 收款（成員 × 場次）
 --    只存「非預設」狀態：預設是「出席、全部時段、未收款」，沒有列 = 預設。
+-- 注意：member_id 不設外鍵指向 members。原因有二：
+--   1) 臨時成員只存在於某一場次的名單快照（sessions.roster），不會進 members 表；
+--   2) 刪除成員後，其「過去已凍結場次」的出席/收款仍要保留，不該被連動刪掉。
 create table if not exists public.attendance (
   session_date date not null references public.sessions(date) on delete cascade,
-  member_id    text not null references public.members(id)     on delete cascade,
+  member_id    text not null,
   status       text not null default 'in' check (status in ('in','leave')),
   slots        text[] not null default '{}',         -- 出席時參加哪些時段（對應 session_slots.id）
   paid         boolean not null default false,
@@ -57,6 +62,8 @@ create table if not exists public.attendance (
   primary key (session_date, member_id)
 );
 create index if not exists idx_attendance_date on public.attendance(session_date);
+-- 若表已存在（之前建過含外鍵），移除該外鍵，讓臨時成員與已刪成員的凍結紀錄可保留：
+alter table public.attendance drop constraint if exists attendance_member_id_fkey;
 
 -- ---------- Row Level Security：完全開放（anon 可讀寫）----------
 alter table public.settings      enable row level security;

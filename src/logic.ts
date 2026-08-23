@@ -42,7 +42,9 @@ export function migrate(raw: any): AppState {
     });
     s.locked = !!s.locked || Object.keys(s.attend).length > 0 || Object.keys(s.paid).length > 0;
     if (!s.locked) s.slots = [];
+    if (s.roster && !Array.isArray(s.roster)) delete s.roster;
   });
+  normalizeRosters(st);
   return st;
 }
 
@@ -240,6 +242,56 @@ export function daySlotLines(state: AppState, iso: string): { t: string; c: stri
   return slots.map((sl) => ({ t: slotLabel(sl.start), c: sortCourts(sl.courts || []).join("、") }));
 }
 
+// ---- roster snapshots ----
+/** A shallow copy of the roster, safe to freeze onto a session. */
+export function cloneRoster(members: Member[]): Member[] {
+  return members.map((m) => ({ id: m.id, name: m.name, level: m.level }));
+}
+
+/**
+ * The roster a session should use for headcount / money. Recorded (locked) days
+ * use their own frozen snapshot; every other day follows the live roster.
+ */
+export function rosterOf(state: AppState, s: SessionRec): Member[] {
+  return s.locked && s.roster && s.roster.length ? s.roster : state.members;
+}
+
+/**
+ * Keep roster snapshots consistent after any change:
+ *  - unlocked days carry no snapshot (they follow the live roster),
+ *  - locked days that are today or in the future stay synced to the live roster,
+ *  - locked days already in the past are frozen (their snapshot is left alone),
+ *    and any legacy locked day missing a snapshot is frozen at the current roster.
+ */
+export function normalizeRosters(state: AppState): void {
+  const today = todayIso();
+  const liveIds = new Set(state.members.map((m) => m.id));
+  state.sessions.forEach((s) => {
+    if (!s.locked) {
+      delete s.roster;
+      return;
+    }
+    if (s.date >= today) {
+      // today / future: follow the live roster, but keep this day's own
+      // one-off "temp" members (roster entries that aren't real members).
+      const temps = (s.roster || []).filter((m) => !liveIds.has(m.id));
+      s.roster = [...cloneRoster(state.members), ...temps];
+    } else if (!s.roster) {
+      // legacy past day with no snapshot → freeze at the current roster.
+      s.roster = cloneRoster(state.members);
+    }
+    // Drop attendance/paid for anyone no longer on this day's roster. Past days
+    // keep their frozen people, so their records survive a member being deleted.
+    const ids = new Set((s.roster || []).map((m) => m.id));
+    Object.keys(s.attend).forEach((id) => {
+      if (!ids.has(id)) delete s.attend[id];
+    });
+    Object.keys(s.paid).forEach((id) => {
+      if (!ids.has(id)) delete s.paid[id];
+    });
+  });
+}
+
 // ---- attendance ----
 export function attOf(s: SessionRec, id: string, allSlotIds: string[]): Att {
   return s.attend[id] || { status: "in", slots: allSlotIds };
@@ -277,9 +329,10 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
   const r = rate(state.settings);
   const slots = effectiveSlots(state, s);
   const allIds = slots.map((x) => x.id);
-  const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
+  const roster = rosterOf(state, s);
+  const ins = roster.filter((m) => attOf(s, m.id, allIds).status === "in");
   res.inCount = ins.length;
-  res.leaveCount = state.members.filter((m) => attOf(s, m.id, allIds).status === "leave").length;
+  res.leaveCount = roster.filter((m) => attOf(s, m.id, allIds).status === "leave").length;
   const base: Record<string, number> = {};
   ins.forEach((m) => (base[m.id] = 0));
   slots.forEach((sl) => {
@@ -323,8 +376,9 @@ export function buildNotice(tpl: string, ctx: Record<string, any>): string {
 export function ctxOpen(state: AppState, s: SessionRec): Record<string, any> {
   const ss = effectiveSlots(state, s);
   const allIds = ss.map((x) => x.id);
-  const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
-  const lv = state.members.filter((m) => attOf(s, m.id, allIds).status === "leave");
+  const roster = rosterOf(state, s);
+  const ins = roster.filter((m) => attOf(s, m.id, allIds).status === "in");
+  const lv = roster.filter((m) => attOf(s, m.id, allIds).status === "leave");
   const lines = ss.map((sl) => {
     const cts = sortCourts(sl.courts || []);
     return sl.start + " - " + endTime(sl.start) + (cts.length ? " 場地 " + cts.join("+") : "");
@@ -344,7 +398,7 @@ export function ctxFee(state: AppState, s: SessionRec): Record<string, any> {
   const c = compute(state, s);
   const ss = effectiveSlots(state, s);
   const allIds = ss.map((x) => x.id);
-  const ins = state.members.filter((m) => attOf(s, m.id, allIds).status === "in");
+  const ins = rosterOf(state, s).filter((m) => attOf(s, m.id, allIds).status === "in");
   const detail = ins
     .map((m) => {
       if (m.level === "fixed") return "・" + m.name + "（隊費）";
