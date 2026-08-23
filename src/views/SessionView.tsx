@@ -199,7 +199,7 @@ export default function SessionView() {
         <div className="card">
           <div className="clabel">
             今天誰來
-            <span className="r">
+            <span className="r att-count">
               出席 {c.inCount} · 請假 {c.leaveCount}
             </span>
           </div>
@@ -208,7 +208,9 @@ export default function SessionView() {
               還沒有成員，先到「成員」分頁加人。
             </div>
           )}
-          {state.members.map((m) => {
+          {[...state.members]
+            .sort((a, b) => (a.level === "fixed" ? 0 : 1) - (b.level === "fixed" ? 0 : 1))
+            .map((m) => {
             const a = attOf(s, m.id, allIds);
             const isIn = a.status === "in";
             const lvcls = m.level === "fixed" ? "fixed" : "";
@@ -248,9 +250,7 @@ export default function SessionView() {
                         {s.paid[m.id] ? "已收 ✓" : "未收"}
                       </span>
                     </>
-                  ) : (
-                    <div className="p-amt leave">請假</div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );
