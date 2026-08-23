@@ -78,8 +78,7 @@ export default function Schedule() {
       <div className="topbar">
         <div className="logo">🏸</div>
         <div>
-          <h1>羽球隊長台</h1>
-          <p>排程 · 出席 · 收費一次搞定</p>
+          <h1>打羽球摟</h1>
         </div>
         <button className="gear" onClick={() => setUi({ view: "settings" })} aria-label="設定">
           ⚙️
