@@ -1,0 +1,53 @@
+export type Level = "fixed" | "floating";
+
+export interface Member {
+  id: string;
+  name: string;
+  level: Level;
+}
+
+export interface Slot {
+  id: string;
+  start: string; // "HH:MM"
+  courts: string[]; // court numbers
+}
+
+export type AttStatus = "in" | "leave";
+
+export interface Att {
+  status: AttStatus;
+  slots: string[]; // slot ids the member joins
+}
+
+export interface SessionRec {
+  id: string; // = date "YYYY-MM-DD"
+  date: string;
+  status: "play" | "rest";
+  slots: Slot[];
+  attend: Record<string, Att>;
+  paid: Record<string, boolean>;
+}
+
+export interface Settings {
+  playWeekday: number; // 0..6 (Sun..Sat)
+  hourlyRate: number;
+  defaultCourt: string;
+  defaultSlots: string[]; // start times
+  tplOpen: string;
+  tplFee: string;
+}
+
+export interface AppState {
+  settings: Settings;
+  members: Member[];
+  sessions: SessionRec[];
+}
+
+export type ViewName = "schedule" | "members" | "settings" | "session" | "calendar";
+
+export interface UIState {
+  view: ViewName;
+  openId?: string;
+  calY?: number;
+  calM?: number;
+}
