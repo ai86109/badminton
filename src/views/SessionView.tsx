@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import {
   attOf,
+  buildFeeNotice,
   buildNotice,
   cloneRoster,
   compute,
-  ctxFee,
   ctxOpen,
   effectiveSlots,
   endTime,
@@ -309,35 +309,21 @@ export default function SessionView() {
 
       {/* action bar */}
       <div className="actionbar">
-        <div className="actionbar-inner">
-          <div className="sum-grid">
-            <div className="sum-block">
-              <div className="k">每人約</div>
-              <div className="v money num">{fmt(c.per)}</div>
+        <div className="actionbar-inner bar-row">
+          <button
+            className="btn btn-solid bar-cta"
+            onClick={() =>
+              copyText(buildFeeNotice(state, s), () => toast("收款通知已複製"))
+            }
+          >
+            💰 複製收款通知
+          </button>
+          <div className="bar-stat">
+            <div className="k">已收 / 應收</div>
+            <div className="v num">
+              {paidCount}
+              <small> / {c.collectCount} 人</small>
             </div>
-            <div className="sum-block">
-              <div className="k">已收 / 應收</div>
-              <div className="v num">
-                {paidCount}
-                <small> / {c.collectCount} 人</small>
-              </div>
-            </div>
-            <div className="sum-block divide">
-              <div className="k">應收合計</div>
-              <div className="v money num">{fmt(c.grand)}</div>
-            </div>
-          </div>
-          <div className="bar-btns">
-            <button
-              className="btn btn-solid"
-              onClick={() =>
-                copyText(buildNotice(state.settings.tplFee, ctxFee(state, s)), () =>
-                  toast("收費通知已複製，貼到群組吧"),
-                )
-              }
-            >
-              💰 產生收費通知
-            </button>
           </div>
         </div>
       </div>

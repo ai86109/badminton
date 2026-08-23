@@ -1,9 +1,8 @@
 import { useRef } from "react";
 import { useStore } from "../store";
-import { buildNotice, endTime, fmt, rate, sampleCtx, TPL_FEE, TPL_OPEN, WD } from "../logic";
+import { buildNotice, endTime, fmt, rate, sampleCtx, TPL_OPEN, WD } from "../logic";
 
 const OPEN_TOKENS = ["日期", "星期", "時段清單", "出席人數", "出席名單", "請假人數", "請假名單"];
-const FEE_TOKENS = ["日期", "星期", "費用摘要", "場地費", "人數", "收費明細", "合計", "結餘"];
 
 export default function SettingsView() {
   const { state, update, setUi } = useStore();
@@ -11,16 +10,15 @@ export default function SettingsView() {
   const r = rate(st);
   const slots = st.defaultSlots.slice().sort();
   const openRef = useRef<HTMLTextAreaElement>(null);
-  const feeRef = useRef<HTMLTextAreaElement>(null);
 
-  function insertToken(which: "tplOpen" | "tplFee", tok: string) {
-    const ta = which === "tplOpen" ? openRef.current : feeRef.current;
+  function insertToken(tok: string) {
+    const ta = openRef.current;
     if (!ta) return;
     const a = ta.selectionStart ?? ta.value.length;
     const b = ta.selectionEnd ?? ta.value.length;
     const next = ta.value.slice(0, a) + "{" + tok + "}" + ta.value.slice(b);
     update((s) => {
-      s.settings[which] = next;
+      s.settings.tplOpen = next;
     });
     requestAnimationFrame(() => {
       ta.focus();
@@ -172,7 +170,7 @@ export default function SettingsView() {
           />
           <div className="legend">
             {OPEN_TOKENS.map((t) => (
-              <button className="tk" key={t} onClick={() => insertToken("tplOpen", t)}>
+              <button className="tk" key={t} onClick={() => insertToken(t)}>
                 {"{" + t + "}"}
               </button>
             ))}
@@ -195,42 +193,12 @@ export default function SettingsView() {
           </button>
         </div>
 
-        {/* 收費通知模板 */}
+        {/* 收費通知 */}
         <div className="card">
-          <div className="clabel">收費通知模板</div>
-          <textarea
-            ref={feeRef}
-            spellCheck={false}
-            value={st.tplFee}
-            onChange={(e) =>
-              update((s) => {
-                s.settings.tplFee = e.target.value;
-              })
-            }
-          />
-          <div className="legend">
-            {FEE_TOKENS.map((t) => (
-              <button className="tk" key={t} onClick={() => insertToken("tplFee", t)}>
-                {"{" + t + "}"}
-              </button>
-            ))}
+          <div className="clabel">收費通知</div>
+          <div className="hint">
+            收費通知會依當天實際出席自動產生，不需模板：大家都打滿全部時段時，顯示總人數與每人金額；有人只打其中一個時段時，會列出各時段人數、打滿者的金額，以及只打單一時段者的名字與金額。到某一天的頁面按「產生收費通知」即可複製。
           </div>
-          <div className="hint">「收費明細」是逐人金額那整段。沒有結餘時，含「結餘」那行會自動省略。</div>
-          <div className="preview">
-            <div className="plabel">預覽（範例資料）</div>
-            <div>{buildNotice(st.tplFee, sampleCtx(state, "fee"))}</div>
-          </div>
-          <button
-            className="link"
-            style={{ marginTop: 10 }}
-            onClick={() =>
-              update((s) => {
-                s.settings.tplFee = TPL_FEE;
-              })
-            }
-          >
-            ↺ 回復預設模板
-          </button>
         </div>
 
         <div className="foot">設定會即時套用到算錢與通知</div>

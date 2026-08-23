@@ -361,6 +361,72 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
   return res;
 }
 
+// ---- 收費通知（依當天出席自動產生）----
+export const FEE_HEAD = "今天羽球場地費";
+export const FEE_FOOT = "再勞煩大家給我錢\n感恩";
+
+const CN = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+/** 小數字轉中文（第一小時、第二小時…）。 */
+function cnNum(n: number): string {
+  if (n <= 10) return CN[n] ?? String(n);
+  if (n < 20) return "十" + (n % 10 ? CN[n % 10] : "");
+  if (n < 100) return CN[Math.floor(n / 10)] + "十" + (n % 10 ? CN[n % 10] : "");
+  return String(n);
+}
+
+/**
+ * 收費通知內文。兩種格式：
+ *  A) 所有參加的非固定成員都打滿全部時段 → 大家金額相同：
+ *       「N人，非固定成員每人X元」
+ *  B) 有非固定成員只打其中部分時段 → 逐時段人數＋打滿者金額＋只打單一時段者的名字與金額：
+ *       「第一小時a人 / 第二小時b人 / 非固定成員每人X元 / 名字…Y元」
+ */
+export function buildFeeNotice(state: AppState, s: SessionRec): string {
+  const c = compute(state, s);
+  const ss = effectiveSlots(state, s);
+  const allIds = ss.map((x) => x.id);
+  const roster = rosterOf(state, s);
+  const ins = roster.filter((m) => attOf(s, m.id, allIds).status === "in");
+  const slotsOf = (m: Member) => new Set(attOf(s, m.id, allIds).slots || []);
+  const playsAll = (m: Member) => allIds.every((id) => slotsOf(m).has(id));
+
+  const nonFixed = ins.filter((m) => m.level !== "fixed");
+  const fullNonFixed = nonFixed.filter((m) => playsAll(m));
+  const partialNonFixed = nonFixed.filter((m) => !playsAll(m));
+
+  const lines: string[] = [FEE_HEAD];
+
+  if (nonFixed.length === 0) {
+    lines.push(`${ins.length}人，全部都是固定成員，無需另外收費`);
+  } else if (partialNonFixed.length === 0) {
+    // 格式 A：全部打滿，金額一致
+    const amt = c.rows[fullNonFixed[0].id] || 0;
+    lines.push(`${ins.length}人，非固定成員每人${fmt(amt)}元`);
+  } else {
+    // 格式 B：有人只打部分時段
+    ss.forEach((sl, i) => {
+      const cnt = ins.filter((m) => slotsOf(m).has(sl.id)).length;
+      lines.push(`第${cnNum(i + 1)}小時${cnt}人`);
+    });
+    if (fullNonFixed.length) {
+      lines.push(`非固定成員每人${fmt(c.rows[fullNonFixed[0].id] || 0)}元`);
+    }
+    // 只打部分時段者：金額相同的併成一行
+    const groups = new Map<number, string[]>();
+    partialNonFixed.forEach((m) => {
+      const amt = c.rows[m.id] || 0;
+      if (!groups.has(amt)) groups.set(amt, []);
+      groups.get(amt)!.push(m.name);
+    });
+    [...groups.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([amt, names]) => lines.push(`${names.join("、")}${fmt(amt)}元`));
+  }
+
+  lines.push(FEE_FOOT);
+  return lines.join("\n");
+}
+
 // ---- notices ----
 export function buildNotice(tpl: string, ctx: Record<string, any>): string {
   return tpl
