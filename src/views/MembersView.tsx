@@ -90,7 +90,6 @@ export default function MembersView() {
             </button>
           </div>
         </div>
-        <div className="foot">固定成員由隊費支付、不逐次收款；非固定成員逐次收款</div>
       </div>
     </>
   );

@@ -1,5 +1,4 @@
 import { useStore } from "../store";
-import { cloudEnabled } from "../supabaseClient";
 import {
   compute,
   daySlotLines,
@@ -108,10 +107,6 @@ export default function Schedule() {
             ))}
           </>
         )}
-        <div className="foot">
-          預設每週{WD[+state.settings.playWeekday]}開打 ·{" "}
-          {cloudEnabled ? "多人共用 · 即時同步" : "本機模式（未設定雲端）"}
-        </div>
       </div>
     </>
   );

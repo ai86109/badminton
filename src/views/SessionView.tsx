@@ -106,23 +106,6 @@ export default function SessionView() {
     });
   }
 
-  let surNote: React.ReactNode = "實收剛好等於場地費";
-  const parts: React.ReactNode[] = [];
-  if (c.fixedCount > 0) parts.push(`固定 ${c.fixedCount} 人（$${fmt(c.fixedTotal)}）由隊費支付`);
-  if (c.roundSurplus > 0)
-    parts.push(
-      <span key="sur">
-        進位結餘 <b>+${fmt(c.roundSurplus)}</b>
-      </span>,
-    );
-  if (parts.length)
-    surNote = parts.map((p, i) => (
-      <span key={i}>
-        {i > 0 ? "　·　" : ""}
-        {p}
-      </span>
-    ));
-
   const totalCourts = ss.reduce((a, sl) => a + courtCount(sl), 0);
 
   return (
@@ -284,7 +267,6 @@ export default function SessionView() {
               <div className="v money num">{fmt(c.grand)}</div>
             </div>
           </div>
-          <div className="sum-note">{surNote}</div>
           <div className="bar-btns">
             <button
               className="btn btn-solid"

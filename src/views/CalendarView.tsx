@@ -47,7 +47,7 @@ export default function CalendarView() {
         </button>
         <div>
           <h1>編輯日曆</h1>
-          <p>點日期切換 會打／不打</p>
+          <p>點日期切換 打／不打</p>
         </div>
       </div>
       <div className="screen no-nav">
@@ -89,20 +89,16 @@ export default function CalendarView() {
         <div className="cal-legend">
           <span className="lg">
             <i className="dot play" />
-            會打
+            打
           </span>
           <span className="lg">
             <i className="dot off" />
-            取消的週{wkName}
+            沒打
           </span>
           <span className="lg">
             <i className="dot today" />
             今天
           </span>
-        </div>
-        <div className="hint" style={{ marginTop: 16 }}>
-          預設每週<b>{wkName}</b>開打（可在設定改）。點任何一天可切換打／不打；點掉的週{wkName}
-          會標成灰色刪除線。
         </div>
       </div>
     </>

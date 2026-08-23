@@ -13,7 +13,7 @@ export function defaultSettings(): Settings {
     playWeekday: 5,
     hourlyRate: 500,
     defaultCourt: "5",
-    defaultSlots: ["19:00", "20:00", "21:00"],
+    defaultSlots: ["18:00", "19:00"],
     tplOpen: TPL_OPEN,
     tplFee: TPL_FEE,
   };
