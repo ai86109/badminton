@@ -4,8 +4,8 @@ export const WD = ["日", "一", "二", "三", "四", "五", "六"];
 export const LV: Record<string, string> = { fixed: "固定", floating: "非固定" };
 
 export const TPL_OPEN = "{日期}\n{時段清單}";
-export const TPL_FEE =
-  "🏸 {日期}（週{星期}）收費\n{費用摘要}｜{人數} 人\n———\n{收費明細}\n———\n應收合計 ${合計}\n（含隊費結餘 ${結餘}）\n請盡快轉帳給隊長 🙏";
+// 收費通知模板：{明細} 會換成依當天出席自動算出的人數與金額那段；其餘文字可自由編輯。
+export const TPL_FEE = "今天羽球場地費\n{明細}\n再勞煩大家給我錢\n感恩";
 
 export function defaultSettings(): Settings {
   return {
@@ -30,6 +30,7 @@ export function migrate(raw: any): AppState {
     members: Array.isArray(raw?.members) ? raw.members : [],
     sessions: Array.isArray(raw?.sessions) ? raw.sessions : [],
   };
+  st.settings.tplFee = normalizeFeeTpl(st.settings.tplFee);
   st.members.forEach((m) => {
     if (m.level !== "fixed") m.level = "floating";
   });
@@ -361,10 +362,7 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
   return res;
 }
 
-// ---- 收費通知（依當天出席自動產生）----
-export const FEE_HEAD = "今天羽球場地費";
-export const FEE_FOOT = "再勞煩大家給我錢\n感恩";
-
+// ---- 收費通知（模板 + 自動明細）----
 const CN = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 /** 小數字轉中文（第一小時、第二小時…）。 */
 function cnNum(n: number): string {
@@ -375,13 +373,13 @@ function cnNum(n: number): string {
 }
 
 /**
- * 收費通知內文。兩種格式：
- *  A) 所有參加的非固定成員都打滿全部時段 → 大家金額相同：
+ * {明細}那段——依當天出席自動算。兩種格式：
+ *  A) 所有非固定成員都打滿全部時段 → 大家金額相同：
  *       「N人，非固定成員每人X元」
  *  B) 有非固定成員只打其中部分時段 → 逐時段人數＋打滿者金額＋只打單一時段者的名字與金額：
  *       「第一小時a人 / 第二小時b人 / 非固定成員每人X元 / 名字…Y元」
  */
-export function buildFeeNotice(state: AppState, s: SessionRec): string {
+export function feeDetail(state: AppState, s: SessionRec): string {
   const c = compute(state, s);
   const ss = effectiveSlots(state, s);
   const allIds = ss.map((x) => x.id);
@@ -394,7 +392,7 @@ export function buildFeeNotice(state: AppState, s: SessionRec): string {
   const fullNonFixed = nonFixed.filter((m) => playsAll(m));
   const partialNonFixed = nonFixed.filter((m) => !playsAll(m));
 
-  const lines: string[] = [FEE_HEAD];
+  const lines: string[] = [];
 
   if (nonFixed.length === 0) {
     lines.push(`${ins.length}人，全部都是固定成員，無需另外收費`);
@@ -423,8 +421,23 @@ export function buildFeeNotice(state: AppState, s: SessionRec): string {
       .forEach(([amt, names]) => lines.push(`${names.join("、")}${fmt(amt)}元`));
   }
 
-  lines.push(FEE_FOOT);
   return lines.join("\n");
+}
+
+/** 舊版或缺 {明細} 的模板一律回到預設，確保數字一定會出現。 */
+export function normalizeFeeTpl(tpl?: string): string {
+  return tpl && tpl.indexOf("{明細}") >= 0 ? tpl : TPL_FEE;
+}
+
+/** 設定頁預覽用的範例明細。 */
+export function sampleFeeDetail(): string {
+  return "第一小時13人\n第二小時14人\n非固定成員每人149元\n里長、宛林72元";
+}
+
+/** 套用使用者模板，把 {明細} 換成自動算出的內容。 */
+export function buildFeeNotice(state: AppState, s: SessionRec): string {
+  const detail = feeDetail(state, s);
+  return normalizeFeeTpl(state.settings.tplFee).replace("{明細}", () => detail);
 }
 
 // ---- notices ----

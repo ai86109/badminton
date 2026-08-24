@@ -1,5 +1,12 @@
 import { supabase } from "./supabaseClient";
-import { defaultSettings, migrate, normalizeRosters, seedState, TPL_FEE, TPL_OPEN } from "./logic";
+import {
+  defaultSettings,
+  migrate,
+  normalizeFeeTpl,
+  normalizeRosters,
+  seedState,
+  TPL_OPEN,
+} from "./logic";
 import type { AppState, Member, SessionRec, Settings, Slot } from "./types";
 
 const LS_KEY = "badminton-captain-shared-v1";
@@ -33,7 +40,7 @@ function rowToSettings(r: any): Settings {
     defaultCourt: r.default_court ?? d.defaultCourt,
     defaultSlots: r.default_slots && r.default_slots.length ? r.default_slots : d.defaultSlots,
     tplOpen: r.tpl_open || TPL_OPEN,
-    tplFee: r.tpl_fee || TPL_FEE,
+    tplFee: normalizeFeeTpl(r.tpl_fee),
   };
 }
 

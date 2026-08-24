@@ -1,24 +1,39 @@
 import { useRef } from "react";
 import { useStore } from "../store";
-import { buildNotice, endTime, fmt, rate, sampleCtx, TPL_OPEN, WD } from "../logic";
+import {
+  buildNotice,
+  endTime,
+  normalizeFeeTpl,
+  sampleCtx,
+  sampleFeeDetail,
+  TPL_FEE,
+  TPL_OPEN,
+  WD,
+} from "../logic";
 
 const OPEN_TOKENS = ["日期", "星期", "時段清單", "出席人數", "出席名單", "請假人數", "請假名單"];
+
+// 24 小時制時間選項（每 30 分鐘一個），讓起始與結束時間顯示一致，不受手機 12/24 制影響。
+const TIME_OPTS: string[] = [];
+for (let h = 0; h < 24; h++) {
+  for (const m of ["00", "30"]) TIME_OPTS.push(String(h).padStart(2, "0") + ":" + m);
+}
 
 export default function SettingsView() {
   const { state, update, setUi } = useStore();
   const st = state.settings;
-  const r = rate(st);
   const slots = st.defaultSlots.slice().sort();
   const openRef = useRef<HTMLTextAreaElement>(null);
+  const feeRef = useRef<HTMLTextAreaElement>(null);
 
-  function insertToken(tok: string) {
-    const ta = openRef.current;
+  function insertToken(which: "tplOpen" | "tplFee", tok: string) {
+    const ta = which === "tplOpen" ? openRef.current : feeRef.current;
     if (!ta) return;
     const a = ta.selectionStart ?? ta.value.length;
     const b = ta.selectionEnd ?? ta.value.length;
     const next = ta.value.slice(0, a) + "{" + tok + "}" + ta.value.slice(b);
     update((s) => {
-      s.settings.tplOpen = next;
+      s.settings[which] = next;
     });
     requestAnimationFrame(() => {
       ta.focus();
@@ -41,8 +56,8 @@ export default function SettingsView() {
       <div className="screen no-nav">
         {/* 固定打球日 */}
         <div className="card">
-          <div className="clabel">固定打球日</div>
-          <div className="field-lbl">每週固定星期幾開打</div>
+          <div className="clabel">打球日</div>
+          <div className="field-lbl">每週固定星期幾打</div>
           <div className="lvseg wk">
             {WD.map((w, i) => (
               <button
@@ -59,15 +74,67 @@ export default function SettingsView() {
             ))}
           </div>
           <div className="hint" style={{ marginTop: 10 }}>
-            日曆上這天預設「會打」，其他天預設休息，都可在日曆手動調整。
+            設定後日曆上這天預設「會打」，其他天預設休息，後續皆可在日曆手動調整。
           </div>
         </div>
 
-        {/* 場地費 */}
+        {/* 打球時段 */}
         <div className="card">
-          <div className="clabel">場地費</div>
+          <div className="clabel">打球時段</div>
+          {slots.map((start, i) => (
+            <div className="slot-row" key={i}>
+              <select
+                className="st num"
+                value={start}
+                onChange={(e) =>
+                  update((s) => {
+                    const arr = s.settings.defaultSlots.slice().sort();
+                    arr[i] = e.target.value;
+                    s.settings.defaultSlots = arr;
+                  })
+                }
+              >
+                {(TIME_OPTS.includes(start) ? TIME_OPTS : [start, ...TIME_OPTS]).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <div className="slot-range">
+                ～ <b className="num">{endTime(start)}</b>
+              </div>
+              <button
+                className="icon-btn"
+                aria-label="刪除"
+                onClick={() =>
+                  update((s) => {
+                    const arr = s.settings.defaultSlots.slice().sort();
+                    arr.splice(i, 1);
+                    s.settings.defaultSlots = arr;
+                  })
+                }
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <div
+            className="add-line"
+            onClick={() =>
+              update((s) => {
+                s.settings.defaultSlots.push("22:00");
+              })
+            }
+          >
+            <span className="plus">+</span>再加一個時段
+          </div>
+        </div>
+
+        {/* 場地 */}
+        <div className="card">
+          <div className="clabel">場地</div>
           <div className="field">
-            <div className="field-lbl">場地一小時多少錢</div>
+            <div className="field-lbl">場地金額</div>
             <div className="rate-wrap">
               <input
                 className="num"
@@ -98,66 +165,11 @@ export default function SettingsView() {
               }
             />
           </div>
-          <div className="hint">
-            每個時段固定 1 小時，場地費 = 場地數 × 每小時金額。新增打球日時，每個時段預設用這個場地號碼，該場次裡可再手動加場地。改每小時金額，所有場次都會跟著重算。金額不整除時一律<b>無條件進位</b>。
-          </div>
         </div>
 
-        {/* 打的時段 */}
+        {/* 場地通知模板 */}
         <div className="card">
-          <div className="clabel">打的時段（預設）</div>
-          {slots.map((start, i) => (
-            <div className="slot-row" key={i}>
-              <input
-                className="st"
-                type="time"
-                value={start}
-                onChange={(e) =>
-                  update((s) => {
-                    const arr = s.settings.defaultSlots.slice().sort();
-                    arr[i] = e.target.value;
-                    s.settings.defaultSlots = arr;
-                  })
-                }
-              />
-              <div className="slot-range">
-                ～ <b>{endTime(start)}</b>（1 小時）
-              </div>
-              <span className="slot-fee num">{fmt(r)}</span>
-              <button
-                className="icon-btn"
-                aria-label="刪除"
-                onClick={() =>
-                  update((s) => {
-                    const arr = s.settings.defaultSlots.slice().sort();
-                    arr.splice(i, 1);
-                    s.settings.defaultSlots = arr;
-                  })
-                }
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          <div
-            className="add-line"
-            onClick={() =>
-              update((s) => {
-                s.settings.defaultSlots.push("22:00");
-              })
-            }
-          >
-            <span className="plus">+</span>再加一個時段
-          </div>
-          <div className="slot-sum">
-            預設每場 <b>{slots.length}</b> 個時段（每段 1 小時）· 場地費合計 ≈{" "}
-            <b className="num">${fmt(slots.length * r)}</b>
-          </div>
-        </div>
-
-        {/* 開打通知模板 */}
-        <div className="card">
-          <div className="clabel">開打通知模板</div>
+          <div className="clabel">場地通知模板</div>
           <textarea
             ref={openRef}
             spellCheck={false}
@@ -170,12 +182,12 @@ export default function SettingsView() {
           />
           <div className="legend">
             {OPEN_TOKENS.map((t) => (
-              <button className="tk" key={t} onClick={() => insertToken(t)}>
+              <button className="tk" key={t} onClick={() => insertToken("tplOpen", t)}>
                 {"{" + t + "}"}
               </button>
             ))}
           </div>
-          <div className="hint">點標籤可插入變數。沒有人請假時，含「請假」那行會自動省略。</div>
+          <div className="hint">點標籤可插入變數。沒有人請假時，含「請假」的那行會自動省略。</div>
           <div className="preview">
             <div className="plabel">預覽</div>
             <div>{buildNotice(st.tplOpen, sampleCtx(state, "open"))}</div>
@@ -193,15 +205,43 @@ export default function SettingsView() {
           </button>
         </div>
 
-        {/* 收費通知 */}
+        {/* 收費通知模板 */}
         <div className="card">
-          <div className="clabel">收費通知</div>
-          <div className="hint">
-            收費通知會依當天實際出席自動產生，不需模板：大家都打滿全部時段時，顯示總人數與每人金額；有人只打其中一個時段時，會列出各時段人數、打滿者的金額，以及只打單一時段者的名字與金額。到某一天的頁面按「產生收費通知」即可複製。
+          <div className="clabel">收費通知模板</div>
+          <textarea
+            ref={feeRef}
+            spellCheck={false}
+            value={st.tplFee}
+            onChange={(e) =>
+              update((s) => {
+                s.settings.tplFee = e.target.value;
+              })
+            }
+          />
+          <div className="legend">
+            <button className="tk" onClick={() => insertToken("tplFee", "明細")}>
+              {"{明細}"}
+            </button>
           </div>
+          <div className="hint">
+            「{"{明細}"}」會依據當天出席狀況自動算出的人數與金額。開頭、結尾等文字都可自由編輯；記得保留 {"{明細}"} 這個標籤。
+          </div>
+          <div className="preview">
+            <div className="plabel">預覽（範例資料）</div>
+            <div>{normalizeFeeTpl(st.tplFee).replace("{明細}", sampleFeeDetail())}</div>
+          </div>
+          <button
+            className="link"
+            style={{ marginTop: 10 }}
+            onClick={() =>
+              update((s) => {
+                s.settings.tplFee = TPL_FEE;
+              })
+            }
+          >
+            ↺ 回復預設模板
+          </button>
         </div>
-
-        <div className="foot">設定會即時套用到算錢與通知</div>
       </div>
     </>
   );
