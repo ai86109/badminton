@@ -155,7 +155,7 @@ export default function SessionView() {
         </button>
         <div>
           <h1>
-            {mmdd(s.date)}（週{wd(s.date)}）
+            {mmdd(s.date)}（{wd(s.date)}）
           </h1>
           <p>{headSpan}</p>
         </div>
@@ -284,7 +284,7 @@ export default function SessionView() {
                         className={"paybtn " + (s.paid[m.id] ? "paid" : "")}
                         onClick={() => togglePaid(m.id)}
                       >
-                        {s.paid[m.id] ? "已收 ✓" : "未收"}
+                        {s.paid[m.id] ? "已收" : "未收"}
                       </span>
                     </>
                   ) : null}

@@ -50,7 +50,6 @@ export default function SettingsView() {
         </button>
         <div>
           <h1>設定</h1>
-          <p>整隊通用的預設值</p>
         </div>
       </div>
       <div className="screen no-nav">

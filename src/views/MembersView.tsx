@@ -78,15 +78,12 @@ export default function MembersView() {
         <div className="logo">👥</div>
         <div>
           <h1>成員名單</h1>
-          <p>
-            固定 {cn.fixed} · 非固定 {cn.floating}
-          </p>
         </div>
       </div>
       <div className="screen">
         <div className="card">
           <div className="clabel">
-            隊員<span className="r">{state.members.length} 人</span>
+            隊員<span className="r">{state.members.length} 人 （固定 {cn.fixed} · 非固定 {cn.floating}）</span>
           </div>
           {ms.length ? (
             ms.map((m) => (
