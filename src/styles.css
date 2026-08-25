@@ -273,3 +273,53 @@
 .login-email{font-family:var(--font-num);font-weight:600;color:var(--accent-ink);margin:4px 0 4px;font-size:15px;word-break:break-all;}
 .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.65;}
 .signout{margin-top:13px;}
+
+/* ---- 羽球描線 loading（載入畫面）---- */
+#sc-loader{
+  --sc-cycle:1.4s;         /* 一輪循環 */
+  --sc-bg:#cc785c;         /* 底色 */
+  --sc-ink:#181715;        /* 線色 */
+  --sc-fill-1:#faf9f5;     /* 羽毛裙填色 */
+  --sc-fill-2:#efe9de;     /* 球頭填色 */
+  --sc-size:min(38vw,160px);
+  position:fixed;inset:0;height:100dvh;display:grid;place-items:center;
+  background:var(--sc-bg);z-index:9999;
+}
+#sc-loader svg{
+  width:var(--sc-size);height:var(--sc-size);overflow:visible;transform-origin:50% 50%;
+  animation:sc-float 3.4s cubic-bezier(.4,0,.4,1) infinite;
+}
+#sc-loader .sc-cycle{animation:sc-out var(--sc-cycle) linear infinite both;}
+#sc-loader .sc-fills{animation:sc-fill var(--sc-cycle) linear infinite both;}
+#sc-loader .sc-strokes{fill:none;stroke:var(--sc-ink);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;}
+#sc-loader .sc-strokes path{
+  stroke-dasharray:var(--len);stroke-dashoffset:var(--len);
+  animation-duration:var(--sc-cycle);animation-timing-function:cubic-bezier(.3,0,.25,1);
+  animation-iteration-count:infinite;animation-fill-mode:both;
+}
+#sc-loader .sc-skirt{--len:322;animation-name:sc-skirt;}
+#sc-loader .sc-band {--len:108;animation-name:sc-band;}
+#sc-loader .sc-f1   {--len:94;animation-name:sc-f1;}
+#sc-loader .sc-f2   {--len:90;animation-name:sc-f2;}
+#sc-loader .sc-f3   {--len:86;animation-name:sc-f3;}
+#sc-loader .sc-f4   {--len:89;animation-name:sc-f4;}
+#sc-loader .sc-f5   {--len:96;animation-name:sc-f5;}
+#sc-loader .sc-cband{--len:46;animation-name:sc-cband;}
+#sc-loader .sc-cork {--len:73;animation-name:sc-cork;}
+@keyframes sc-skirt{0%,3%{stroke-dashoffset:var(--len)}30%,100%{stroke-dashoffset:0}}
+@keyframes sc-band {0%,26%{stroke-dashoffset:var(--len)}38%,100%{stroke-dashoffset:0}}
+@keyframes sc-f1   {0%,30%{stroke-dashoffset:var(--len)}42%,100%{stroke-dashoffset:0}}
+@keyframes sc-f2   {0%,33%{stroke-dashoffset:var(--len)}45%,100%{stroke-dashoffset:0}}
+@keyframes sc-f3   {0%,36%{stroke-dashoffset:var(--len)}48%,100%{stroke-dashoffset:0}}
+@keyframes sc-f4   {0%,39%{stroke-dashoffset:var(--len)}51%,100%{stroke-dashoffset:0}}
+@keyframes sc-f5   {0%,42%{stroke-dashoffset:var(--len)}54%,100%{stroke-dashoffset:0}}
+@keyframes sc-cband{0%,52%{stroke-dashoffset:var(--len)}60%,100%{stroke-dashoffset:0}}
+@keyframes sc-cork {0%,56%{stroke-dashoffset:var(--len)}72%,100%{stroke-dashoffset:0}}
+@keyframes sc-fill {0%,60%{opacity:0}76%,100%{opacity:1}}
+@keyframes sc-out  {0%,88%{opacity:1}100%{opacity:0}}
+@keyframes sc-float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.5%) rotate(1.6deg)}}
+@media (prefers-reduced-motion: reduce){
+  #sc-loader svg,#sc-loader .sc-cycle,#sc-loader .sc-fills,#sc-loader .sc-strokes path{animation:none;}
+  #sc-loader .sc-strokes path{stroke-dashoffset:0;}
+  #sc-loader .sc-fills{opacity:1;}
+}

@@ -29,11 +29,32 @@ export function useStore(): StoreCtx {
 
 function Splash() {
   return (
-    <div className="app">
-      <div className="splash">
-        <div className="splash-logo"><img src="/apple-touch-icon.png" alt="打羽球摟" /></div>
-        <div className="splash-txt">載入中…</div>
-      </div>
+    <div id="sc-loader" role="status" aria-live="polite" aria-label="載入中">
+      <svg viewBox="0 0 180 180" aria-hidden="true">
+        <g className="sc-cycle">
+          <g className="sc-fills">
+            <path
+              d="M 30,54 Q 30,45 39,44 L 122,32 Q 130,30 133,38 L 136,48 L 114,116 Q 114,121 109,121 L 78,122 Q 72,122 70,117 L 31,58 Z"
+              fill="var(--sc-fill-1)"
+            />
+            <path
+              d="M 75,121 C 74,139 80,148 94,148 C 108,148 114,139 113,121 Z"
+              fill="var(--sc-fill-2)"
+            />
+          </g>
+          <g className="sc-strokes">
+            <path className="sc-skirt" d="M 30,54 Q 30,45 39,44 L 122,32 Q 130,30 133,38 L 136,48 L 114,116 Q 114,121 109,121 L 78,122 Q 72,122 70,117 L 31,58 Z" />
+            <path className="sc-band" d="M 31,57 Q 82,58 134,45" />
+            <path className="sc-f1" d="M 41,45 Q 70,80 86,119" />
+            <path className="sc-f2" d="M 58,43 Q 76,84 90,119" />
+            <path className="sc-f3" d="M 80,39 Q 87,80 93,119" />
+            <path className="sc-f4" d="M 105,35 Q 101,80 96,119" />
+            <path className="sc-f5" d="M 120,32 Q 107,80 99,119" />
+            <path className="sc-cband" d="M 71,120 Q 93,124 114,119" />
+            <path className="sc-cork" d="M 75,121 C 74,139 80,148 94,148 C 108,148 114,139 113,121" />
+          </g>
+        </g>
+      </svg>
     </div>
   );
 }
