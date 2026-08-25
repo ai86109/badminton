@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StoreProvider, useStore } from "./store";
 import BottomNav from "./components/BottomNav";
 import Schedule from "./views/Schedule";
@@ -27,6 +29,8 @@ export default function App() {
   return (
     <StoreProvider>
       <Shell />
+      <Analytics />
+      <SpeedInsights />
     </StoreProvider>
   );
 }
