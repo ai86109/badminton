@@ -76,7 +76,7 @@ export default function Schedule() {
   return (
     <>
       <div className="topbar">
-        <div className="logo">🏸</div>
+        <div className="logo"><img src="/apple-touch-icon.png" alt="打羽球摟" /></div>
         <div>
           <h1>打羽球摟</h1>
         </div>
@@ -86,7 +86,7 @@ export default function Schedule() {
       </div>
       <div className="screen">
         <button className="btn btn-solid btn-block" onClick={openCalendar}>
-          📅 編輯日曆
+          編輯日曆
         </button>
         <div className="section-h">
           <h2>即將到來</h2>

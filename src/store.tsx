@@ -31,7 +31,7 @@ function Splash() {
   return (
     <div className="app">
       <div className="splash">
-        <div className="splash-logo">🏸</div>
+        <div className="splash-logo"><img src="/apple-touch-icon.png" alt="打羽球摟" /></div>
         <div className="splash-txt">載入中…</div>
       </div>
     </div>
@@ -42,7 +42,7 @@ function ErrorScreen() {
   return (
     <div className="app">
       <div className="splash">
-        <div className="splash-logo">🏸</div>
+        <div className="splash-logo"><img src="/apple-touch-icon.png" alt="打羽球摟" /></div>
         <div className="splash-txt" style={{ maxWidth: 260, textAlign: "center", lineHeight: 1.7 }}>
           連不上雲端資料。請檢查網路後重新整理。
         </div>
