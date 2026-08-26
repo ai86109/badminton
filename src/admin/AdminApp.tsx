@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import AdminShell from "./AdminShell";
 import {
   ADMIN_EMAIL,
   adminSupabase,
@@ -7,35 +8,6 @@ import {
   markActive,
   REMEMBER_MS,
 } from "./adminSupabase";
-
-/** 後台空殼（登入後看到的內容）。之後的管理功能加在這裡。 */
-function AdminShell({ onLogout }: { onLogout: () => void }) {
-  return (
-    <div className="app">
-      <div className="topbar">
-        <div className="logo">
-          <img src="/admin-apple-touch-icon.png" alt="羽球後台" />
-        </div>
-        <div>
-          <h1>管理後台</h1>
-          <p>打羽球摟 · admin</p>
-        </div>
-        <button className="gear" onClick={onLogout} aria-label="登出" title="登出此裝置">
-          ⏻
-        </button>
-      </div>
-      <div className="screen no-nav">
-        <div className="card">
-          <div className="clabel">建置中</div>
-          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)", lineHeight: 1.7 }}>
-            這是後台的骨架頁面。之後要放的功能（每項都會是新的資料表、並設成只有 admin
-            能存取）會加在這裡。
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** 密碼登入畫面（只問密碼，email 從環境變數帶入）。 */
 function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
