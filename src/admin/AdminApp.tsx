@@ -43,6 +43,25 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // 登入頁鎖住捲動：不讓頁面上下左右移動（含 iOS 橡皮筋回彈）。離開登入頁時還原。
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      overscroll: body.style.overscrollBehavior,
+    };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.overscrollBehavior = prev.overscroll;
+    };
+  }, []);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -71,21 +90,46 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="app">
-      <div className="login">
+    <div
+      className="login"
+      style={{
+        position: "fixed",
+        inset: 0,
+        minHeight: "100dvh",
+        maxWidth: 520,
+        margin: "0 auto",
+        overflow: "hidden",
+        overscrollBehavior: "none",
+      }}
+    >
+      {/* 卡片本身置中；icon＋標題浮在卡片上方 */}
+      <div style={{ position: "relative", width: "100%", maxWidth: 360 }}>
         <div
-          className="login-logo"
-          style={{ overflow: "hidden", background: "transparent" }}
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: "100%",
+            marginBottom: 18,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
         >
-          <img
-            src="/admin-apple-touch-icon.png"
-            alt="羽球後台"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
+          <div className="login-logo" style={{ overflow: "hidden", background: "transparent" }}>
+            <img
+              src="/admin-apple-touch-icon.png"
+              alt="羽球後台"
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          </div>
+          <h1 className="login-title">管理後台</h1>
         </div>
-        <h1 className="login-title">管理後台</h1>
-        <p className="login-sub">請輸入管理密碼。通過後這台裝置 30 天內免再輸入。</p>
-        <form className="login-card card" onSubmit={submit}>
+        <form
+          className="login-card card"
+          onSubmit={submit}
+          style={{ maxWidth: "none", marginTop: 0 }}
+        >
           <div className="field-lbl">管理密碼</div>
           <input
             type="password"
