@@ -150,15 +150,17 @@ export function settingsSlots(settings: Settings): Slot[] {
 }
 
 /**
- * Slots for a day that is locking in — each gets a UNIQUE id (not the start
- * time), so different days never collide on the same session_slots primary key.
- * The start time is kept in `start`.
+ * Slots for a day that is locking in. The id is `${date}@${start}` — unique
+ * across days (so different days never collide on the session_slots primary
+ * key), yet deterministic within a day (so two people first-recording the same
+ * day generate the SAME ids and converge instead of creating duplicate slots).
+ * The start time is also kept in `start`.
  */
-export function freshSlots(settings: Settings): Slot[] {
+export function freshSlots(settings: Settings, date: string): Slot[] {
   return settings.defaultSlots
     .slice()
     .sort()
-    .map((st) => ({ id: uid(), start: st, courts: [String(settings.defaultCourt || "1")] }));
+    .map((st) => ({ id: `${date}@${st}`, start: st, courts: [String(settings.defaultCourt || "1")] }));
 }
 
 /**
@@ -169,7 +171,7 @@ export function freshSlots(settings: Settings): Slot[] {
  */
 export function repairLockedSlots(state: AppState, s: SessionRec): void {
   if (!s.locked || (s.slots && s.slots.length)) return;
-  const fresh = freshSlots(state.settings);
+  const fresh = freshSlots(state.settings, s.date);
   const idByStart = new Map(fresh.map((sl) => [sl.start, sl.id]));
   const validIds = new Set(fresh.map((sl) => sl.id));
   for (const mid in s.attend) {
@@ -195,7 +197,7 @@ export function effectiveSlots(state: AppState, s: SessionRec): Slot[] {
 /** Freeze the current effective slots onto the session (first edit / first record). */
 export function lockSlots(state: AppState, s: SessionRec): void {
   if (!s.locked) {
-    s.slots = freshSlots(state.settings);
+    s.slots = freshSlots(state.settings, s.date);
     s.locked = true;
   }
 }
