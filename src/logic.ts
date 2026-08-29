@@ -150,18 +150,52 @@ export function settingsSlots(settings: Settings): Slot[] {
 }
 
 /**
+ * Slots for a day that is locking in — each gets a UNIQUE id (not the start
+ * time), so different days never collide on the same session_slots primary key.
+ * The start time is kept in `start`.
+ */
+export function freshSlots(settings: Settings): Slot[] {
+  return settings.defaultSlots
+    .slice()
+    .sort()
+    .map((st) => ({ id: uid(), start: st, courts: [String(settings.defaultCourt || "1")] }));
+}
+
+/**
+ * Repair a locked day whose stored slots were lost to the legacy time-id
+ * collision: rebuild slots with fresh unique ids, remapping any per-slot
+ * attendance refs by start time so partial participation stays intact.
+ * No-op when the day already has slots.
+ */
+export function repairLockedSlots(state: AppState, s: SessionRec): void {
+  if (!s.locked || (s.slots && s.slots.length)) return;
+  const fresh = freshSlots(state.settings);
+  const idByStart = new Map(fresh.map((sl) => [sl.start, sl.id]));
+  const validIds = new Set(fresh.map((sl) => sl.id));
+  for (const mid in s.attend) {
+    const a = s.attend[mid];
+    if (a && Array.isArray(a.slots) && a.slots.length) {
+      a.slots = a.slots.map((old) => idByStart.get(old) ?? old).filter((id) => validIds.has(id));
+    }
+  }
+  s.slots = fresh;
+}
+
+/**
  * The slots a session actually uses right now: its own frozen slots once it is
  * locked, otherwise the current settings' default slots (so untouched days
  * follow settings automatically).
  */
 export function effectiveSlots(state: AppState, s: SessionRec): Slot[] {
-  return s.locked ? sortedSlots(s) : settingsSlots(state.settings);
+  // A locked day with lost/empty slots falls back to the current settings so the
+  // schedule still shows its times and the money still computes.
+  return s.locked && s.slots.length ? sortedSlots(s) : settingsSlots(state.settings);
 }
 
 /** Freeze the current effective slots onto the session (first edit / first record). */
 export function lockSlots(state: AppState, s: SessionRec): void {
   if (!s.locked) {
-    s.slots = settingsSlots(state.settings);
+    s.slots = freshSlots(state.settings);
     s.locked = true;
   }
 }
@@ -190,6 +224,9 @@ export function ensureDay(state: AppState, iso: string): SessionRec {
   if (!r) {
     r = { id: iso, date: iso, status: defaultStatus(state, iso), slots: [], attend: {}, paid: {} };
     state.sessions.push(r);
+  } else {
+    // heal any legacy locked day that lost its slots, and persist on this open
+    repairLockedSlots(state, r);
   }
   return r;
 }
