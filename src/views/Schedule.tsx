@@ -57,7 +57,7 @@ function RestCard({ iso }: { iso: string }) {
         <div className="w">週{wd(iso)}</div>
       </div>
       <div className="sess-main">
-        <div className="rest-label">休息 · 不打</div>
+        <div className="rest-label">休息</div>
       </div>
     </div>
   );
