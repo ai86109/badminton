@@ -65,6 +65,22 @@ create index if not exists idx_attendance_date on public.attendance(session_date
 -- 若表已存在（之前建過含外鍵），移除該外鍵，讓臨時成員與已刪成員的凍結紀錄可保留：
 alter table public.attendance drop constraint if exists attendance_member_id_fkey;
 
+-- 6) 公積金事件（後台專用，手動收支）。自動的「場地結餘」不入這張表，由前端即時算。
+create table if not exists public.fund_events (
+  id          uuid primary key default gen_random_uuid(),
+  event_date  date not null,
+  kind        text not null check (kind in ('income','expense')),
+  label       text not null default '',
+  amount      integer not null check (amount >= 0),
+  created_at  timestamptz not null default now()
+);
+create index if not exists idx_fund_events_date on public.fund_events(event_date);
+-- 只有「登入的 admin（authenticated）」能讀寫；匿名（主 App）完全看不到。
+alter table public.fund_events enable row level security;
+drop policy if exists "fund admin only" on public.fund_events;
+create policy "fund admin only" on public.fund_events
+  for all to authenticated using (true) with check (true);
+
 -- ---------- Row Level Security：完全開放（anon 可讀寫）----------
 alter table public.settings      enable row level security;
 alter table public.members       enable row level security;

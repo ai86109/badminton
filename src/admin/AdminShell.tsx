@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import BillingPage from "./BillingPage";
 
 /**
  * 登入後的後台外框。
@@ -50,17 +51,6 @@ function Placeholder({ title, hint }: { title: string; hint: string }) {
       <div className="clabel">{title}</div>
       <p style={{ margin: 0, fontSize: 14, color: "var(--muted)", lineHeight: 1.7 }}>{hint}</p>
     </div>
-  );
-}
-
-function BillingPage({ onGear }: { onGear: () => void }) {
-  return (
-    <>
-      <AdminTopbar title="帳務" onGear={onGear} />
-      <div className="screen">
-        <Placeholder title="建置中" hint="這裡之後放收支明細、對帳、每人結算等帳務功能。" />
-      </div>
-    </>
   );
 }
 

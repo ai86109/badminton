@@ -323,3 +323,60 @@
   #sc-loader .sc-strokes path{stroke-dashoffset:0;}
   #sc-loader .sc-fills{opacity:1;}
 }
+
+/* ---- 帳務（公積金）---- */
+.fund-bal{background:var(--accent-soft);border-radius:14px;padding:20px 20px 18px;margin-top:2px;}
+.fund-bal-label{font-size:11.5px;font-weight:600;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1.5px;}
+.fund-bal-amt{font-family:var(--font-num);font-size:42px;font-weight:600;letter-spacing:-1.5px;line-height:1.1;margin-top:8px;color:var(--ink);}
+.fund-bal-amt .cur{font-size:22px;color:var(--muted);margin-right:3px;letter-spacing:0;}
+
+.fund-list{padding:4px 16px;}
+.log-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border-soft);}
+.log-row:first-child{border-top:none;}
+.log-date{flex:0 0 auto;width:42px;font-size:13px;color:var(--muted);font-weight:600;text-align:center;letter-spacing:-.5px;}
+.log-main{flex:1 1 auto;min-width:0;}
+.log-title{font-size:14.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.log-tag{font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;}
+.log-tag.auto{background:#eadfd0;color:var(--accent-ink);}
+.log-tag.manual{background:var(--surface-2);color:var(--muted);}
+.log-amt{flex:0 0 auto;font-size:15px;font-weight:600;letter-spacing:-.5px;}
+.log-amt.plus{color:#3f8f57;}
+.log-amt.minus{color:#b3523c;}
+.log-del{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:var(--faint);font-size:18px;cursor:pointer;display:grid;place-items:center;}
+.log-del:hover{background:var(--surface-2);color:var(--warn);}
+.log-del-spacer{flex:0 0 auto;width:28px;height:28px;}
+
+.lvseg.seg2{width:100%;}
+.lvseg.seg2 button{flex:1;padding:9px 0;font-size:14px;}
+.lvseg.seg2 button.on{color:var(--accent-ink);}
+
+.scrim{position:fixed;inset:0;background:rgba(20,20,19,.32);z-index:30;opacity:0;transition:opacity .24s cubic-bezier(.2,0,.2,1);}
+.scrim.show{opacity:1;}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(20,20,19,.16);z-index:31;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,0,0,1);will-change:transform;}
+.sheet.show{transform:translateY(0);}
+.sheet-grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 14px;}
+.sheet-h{font-family:var(--font-serif);font-size:22px;font-weight:600;margin-bottom:16px;}
+.fund-fld{margin-bottom:13px;}
+.fund-fld > .field-lbl{margin-bottom:6px;}
+
+.fund-combo{position:relative;}
+.fund-combo > input{padding-right:40px;}
+.fund-combo-caret{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:none;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;border-radius:8px;display:grid;place-items:center;}
+.fund-combo-caret:hover{background:var(--surface-2);}
+.fund-combo-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-raised);z-index:5;overflow:hidden;}
+.fund-combo-list button{display:block;width:100%;text-align:left;border:none;background:transparent;padding:11px 14px;font-size:15px;color:var(--ink);cursor:pointer;}
+.fund-combo-list button:hover{background:var(--surface-2);}
+
+.money{position:relative;}
+.money::before{content:"$";position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none;}
+.money input{padding-left:26px;font-family:var(--font-num);font-weight:600;}
+
+.dialog{position:fixed;left:24px;right:24px;top:50%;transform:translateY(-50%);max-width:472px;margin:0 auto;background:var(--bg);border-radius:16px;padding:22px 20px 18px;box-shadow:0 12px 40px rgba(20,20,19,.24);z-index:31;}
+.dlg-title{font-family:var(--font-serif);font-size:21px;font-weight:600;margin-bottom:10px;}
+.dlg-body{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:18px;}
+.dlg-body b{color:#b3523c;font-family:var(--font-num);}
+.dlg-body .q{color:var(--ink);font-weight:600;}
+.dlg-actions{display:flex;gap:10px;}
+.dlg-actions .btn{flex:1;}
+.btn-danger{background:#b3523c;color:#fff;}
+.btn-danger:active{background:#933f2c;}
