@@ -152,17 +152,45 @@ export default function SettingsView() {
           </div>
           <div className="field">
             <div className="field-lbl">預設場地號碼</div>
-            <input
-              className="num"
-              type="text"
-              inputMode="numeric"
-              value={st.defaultCourt}
-              onChange={(e) =>
+            {st.defaultCourt.map((court, i) => (
+              <div className="slot-row" key={i}>
+                <input
+                  className="num"
+                  type="text"
+                  inputMode="numeric"
+                  style={{ flex: "1 1 auto", minWidth: 0 }}
+                  value={court}
+                  onChange={(e) =>
+                    update((s) => {
+                      s.settings.defaultCourt[i] = e.target.value;
+                    })
+                  }
+                />
+                {st.defaultCourt.length > 1 && (
+                  <button
+                    className="icon-btn"
+                    aria-label="刪除"
+                    onClick={() =>
+                      update((s) => {
+                        s.settings.defaultCourt.splice(i, 1);
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            <div
+              className="add-line"
+              onClick={() =>
                 update((s) => {
-                  s.settings.defaultCourt = e.target.value;
+                  s.settings.defaultCourt.push("");
                 })
               }
-            />
+            >
+              <span className="plus">+</span>再加一個場地
+            </div>
           </div>
         </div>
 

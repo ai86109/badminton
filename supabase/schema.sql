@@ -11,12 +11,26 @@ create table if not exists public.settings (
   id            smallint primary key default 1 check (id = 1),
   play_weekday  smallint not null default 5,                              -- 0=日 … 6=六
   hourly_rate   integer  not null default 500,
-  default_court text     not null default '5',
+  default_court text[]   not null default array['5'],           -- 季租場地號碼，可多面
   default_slots text[]   not null default array['19:00','20:00','21:00'], -- 預設時段 "HH:MM"
   tpl_open      text     not null default '',                             -- 空 = 前端套用預設模板
   tpl_fee       text     not null default '',
   updated_at    timestamptz not null default now()
 );
+-- 若表已存在且 default_court 還是舊的單一 text，搬移成 text[]（可重複執行）：
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='settings'
+      and column_name='default_court' and data_type <> 'ARRAY'
+  ) then
+    alter table public.settings alter column default_court drop default;
+    alter table public.settings alter column default_court type text[] using
+      case when default_court is null or btrim(default_court)='' then array[]::text[] else array[default_court] end;
+    alter table public.settings alter column default_court set default array['5'];
+  end if;
+end $$;
 
 -- 2) 成員（id 由前端產生）
 create table if not exists public.members (

@@ -46,7 +46,7 @@ export interface SessionRec {
 export interface Settings {
   playWeekday: number; // 0..6 (Sun..Sat)
   hourlyRate: number;
-  defaultCourt: string;
+  defaultCourt: string[]; // 季租場地號碼，可多面
   defaultSlots: string[]; // start times
   tplOpen: string;
   tplFee: string;

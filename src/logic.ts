@@ -11,7 +11,7 @@ export function defaultSettings(): Settings {
   return {
     playWeekday: 5,
     hourlyRate: 500,
-    defaultCourt: "5",
+    defaultCourt: ["5"],
     defaultSlots: ["18:00", "19:00"],
     tplOpen: TPL_OPEN,
     tplFee: TPL_FEE,
@@ -31,6 +31,13 @@ export function migrate(raw: any): AppState {
     sessions: Array.isArray(raw?.sessions) ? raw.sessions : [],
   };
   st.settings.tplFee = normalizeFeeTpl(st.settings.tplFee);
+  // 舊資料相容：defaultCourt 從單一字串 → 陣列
+  const dcRaw: unknown = st.settings.defaultCourt;
+  st.settings.defaultCourt = Array.isArray(dcRaw)
+    ? dcRaw.map((c) => String(c))
+    : dcRaw
+      ? [String(dcRaw)]
+      : [];
   st.members.forEach((m) => {
     if (m.level !== "fixed") m.level = "floating";
   });
@@ -142,11 +149,18 @@ export function settingsSpan(settings: Settings): string {
   return a[0] + "–" + endTime(a[a.length - 1]);
 }
 /** Slots derived live from the current settings. Deterministic ids (= start time). */
+/** 清過的季租場地號碼陣列（去空白/空字串）；空的話退回 ["1"]。 */
+export function defaultCourts(settings: Settings): string[] {
+  const cs = (settings.defaultCourt || []).map((c) => String(c).trim()).filter(Boolean);
+  return cs.length ? cs : ["1"];
+}
+
 export function settingsSlots(settings: Settings): Slot[] {
+  const dc = defaultCourts(settings);
   return settings.defaultSlots
     .slice()
     .sort()
-    .map((st) => ({ id: st, start: st, courts: [String(settings.defaultCourt || "1")] }));
+    .map((st) => ({ id: st, start: st, courts: dc.slice() }));
 }
 
 /**
@@ -157,10 +171,11 @@ export function settingsSlots(settings: Settings): Slot[] {
  * The start time is also kept in `start`.
  */
 export function freshSlots(settings: Settings, date: string): Slot[] {
+  const dc = defaultCourts(settings);
   return settings.defaultSlots
     .slice()
     .sort()
-    .map((st) => ({ id: `${date}@${st}`, start: st, courts: [String(settings.defaultCourt || "1")] }));
+    .map((st) => ({ id: `${date}@${st}`, start: st, courts: dc.slice() }));
 }
 
 /**
@@ -553,7 +568,13 @@ export function sampleCtx(state: AppState, kind: "open" | "fee"): Record<string,
       時段清單: state.settings.defaultSlots
         .slice()
         .sort()
-        .map((st) => st + " - " + endTime(st) + (state.settings.defaultCourt ? " 場地 " + state.settings.defaultCourt : ""))
+        .map(
+          (st) =>
+            st +
+            " - " +
+            endTime(st) +
+            (state.settings.defaultCourt.length ? " 場地 " + state.settings.defaultCourt.join("、") : ""),
+        )
         .join("\n"),
       出席人數: 6,
       出席名單: "小明、阿華、婷婷、阿凱、小美、Kevin",

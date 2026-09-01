@@ -32,12 +32,17 @@ function settingsToRow(s: Settings) {
     updated_at: new Date().toISOString(),
   };
 }
+function toCourtArray(v: any, dflt: string[]): string[] {
+  if (Array.isArray(v)) return v.map(String);
+  if (typeof v === "string" && v.trim()) return [v]; // 相容：舊的單一 text 欄
+  return dflt;
+}
 function rowToSettings(r: any): Settings {
   const d = defaultSettings();
   return {
     playWeekday: r.play_weekday ?? d.playWeekday,
     hourlyRate: r.hourly_rate ?? d.hourlyRate,
-    defaultCourt: r.default_court ?? d.defaultCourt,
+    defaultCourt: toCourtArray(r.default_court, d.defaultCourt),
     defaultSlots: r.default_slots && r.default_slots.length ? r.default_slots : d.defaultSlots,
     tplOpen: r.tpl_open || TPL_OPEN,
     tplFee: normalizeFeeTpl(r.tpl_fee),

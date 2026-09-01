@@ -80,7 +80,9 @@ export default function SessionView() {
       if (!sl) return;
       if (!sl.courts) sl.courts = [];
       const nums = sl.courts.map((x) => parseInt(x, 10)).filter((n) => !isNaN(n));
-      const next = nums.length ? Math.max(...nums) + 1 : parseInt(state.settings.defaultCourt, 10) || 1;
+      const next = nums.length
+        ? Math.max(...nums) + 1
+        : parseInt(state.settings.defaultCourt[0] ?? "1", 10) || 1;
       sl.courts.push(String(next));
     });
   }
