@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Member } from "../types";
 
 /** 幾個「群組」快捷，點了直接把對象設成這個標籤（純標註）。 */
@@ -23,7 +23,7 @@ export function TargetPicker({
   members,
   onChange,
   onCommit,
-  placeholder = "對象（可留空）",
+  placeholder = "對象（選填）",
 }: {
   value: string;
   members: Member[];
@@ -33,12 +33,24 @@ export function TargetPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false); // 是否進入「自行選擇」勾選模式
+  const rootRef = useRef<HTMLDivElement>(null);
 
   function close(commit = true) {
     setOpen(false);
     setPick(false);
     if (commit) onCommit?.();
   }
+
+  // 點下拉以外的地方 → 收合
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   function chooseGroup(g: string) {
     onChange(g);
@@ -59,30 +71,31 @@ export function TargetPicker({
   }
 
   return (
-    <div className="fund-combo">
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => close()}
-      />
-      <button
-        type="button"
-        className="fund-combo-caret"
-        aria-label="對象選項"
-        onMouseDown={(e) => {
-          e.preventDefault();
-          setOpen((o) => {
-            const nx = !o;
-            if (!nx) setPick(false);
-            return nx;
-          });
-        }}
-      >
-        ▾
-      </button>
+    <div className="fund-combo" ref={rootRef}>
+      <div className="fund-combo-field">
+        <input
+          type="text"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setOpen(true)}
+        />
+        <button
+          type="button"
+          className="fund-combo-caret"
+          aria-label="對象選項"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setOpen((o) => {
+              const nx = !o;
+              if (!nx) setPick(false);
+              return nx;
+            });
+          }}
+        >
+          ▾
+        </button>
+      </div>
 
       {open && (
         <div className="fund-combo-list">

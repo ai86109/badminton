@@ -121,7 +121,7 @@ export function AdminSettingsView({
                         type="text"
                         inputMode="numeric"
                         value={p.amount == null ? "" : String(p.amount)}
-                        placeholder="金額"
+                        placeholder="金額（選填）"
                         onChange={(e) => {
                           const digits = e.target.value.replace(/[^0-9]/g, "");
                           onEditPreset(p.id, { amount: digits === "" ? null : Number(digits) });

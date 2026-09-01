@@ -144,6 +144,7 @@ export function BillingView({
   const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
   const [comboOpen, setComboOpen] = useState(false);
+  const comboRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [del, setDel] = useState<FundEvent | null>(null);
   const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
@@ -213,6 +214,16 @@ export function BillingView({
 
     return { byDay, net, bal, recent, months, years };
   }, [data.events]);
+
+  // 點「說明」下拉以外的地方 → 收合
+  useEffect(() => {
+    if (!comboOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (comboRef.current && !comboRef.current.contains(e.target as Node)) setComboOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [comboOpen]);
 
   function openSheet() {
     setKind("expense");
@@ -385,21 +396,26 @@ export function BillingView({
 
             <div className="fund-fld">
               <label className="field-lbl">說明</label>
-              <div className="fund-combo">
-                <input
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  onFocus={() => setComboOpen(true)}
-                  placeholder="可自訂，或點右邊選預設"
-                />
-                <button
-                  type="button"
-                  className="fund-combo-caret"
-                  aria-label="預設選項"
-                  onClick={() => setComboOpen((o) => !o)}
-                >
-                  ▾
-                </button>
+              <div className="fund-combo" ref={comboRef}>
+                <div className="fund-combo-field">
+                  <input
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    onFocus={() => setComboOpen(true)}
+                    placeholder="可自訂，或右邊下拉選擇預設"
+                  />
+                  <button
+                    type="button"
+                    className="fund-combo-caret"
+                    aria-label="預設選項"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setComboOpen((o) => !o);
+                    }}
+                  >
+                    ▾
+                  </button>
+                </div>
                 {comboOpen && kindPresets.length > 0 && (
                   <div className="fund-combo-list">
                     {kindPresets.map((p) => (

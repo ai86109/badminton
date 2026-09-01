@@ -408,7 +408,7 @@
 
 .scrim{position:fixed;inset:0;background:rgba(20,20,19,.32);z-index:30;opacity:0;transition:opacity .24s cubic-bezier(.2,0,.2,1);}
 .scrim.show{opacity:1;}
-.sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(20,20,19,.16);z-index:31;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,0,0,1);will-change:transform;}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(20,20,19,.16);z-index:31;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,0,0,1);will-change:transform;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .sheet.show{transform:translateY(0);}
 .sheet-grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 14px;}
 .sheet-h{font-family:var(--font-serif);font-size:22px;font-weight:600;margin-bottom:16px;}
@@ -416,10 +416,12 @@
 .fund-fld > .field-lbl{margin-bottom:6px;}
 
 .fund-combo{position:relative;}
-.fund-combo > input{padding-right:40px;}
-.fund-combo-caret{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:none;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;border-radius:8px;display:grid;place-items:center;}
+.fund-combo-field{position:relative;}
+.fund-combo-field > input{padding-right:44px;}
+.fund-combo-caret{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:transparent;color:var(--muted);font-size:19px;line-height:1;cursor:pointer;border-radius:8px;display:grid;place-items:center;}
 .fund-combo-caret:hover{background:var(--surface-2);}
-.fund-combo-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-raised);z-index:5;overflow:hidden;}
+/* 下拉改「行內展開」：撐開內容、由 sheet 捲動，不會被裁切 */
+.fund-combo-list{margin-top:5px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-raised);overflow-y:auto;overflow-x:hidden;max-height:min(300px,46vh);}
 .fund-combo-list button{display:block;width:100%;text-align:left;border:none;background:transparent;padding:11px 14px;font-size:15px;color:var(--ink);cursor:pointer;}
 .fund-combo-list button:hover{background:var(--surface-2);}
 
