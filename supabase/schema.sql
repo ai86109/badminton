@@ -95,6 +95,43 @@ drop policy if exists "fund admin only" on public.fund_events;
 create policy "fund admin only" on public.fund_events
   for all to authenticated using (true) with check (true);
 
+-- 7) 公積金：預設事件選項（後台專用）。新增事件時的下拉選單來源，可帶預填的對象／金額。
+create table if not exists public.fund_presets (
+  id         uuid primary key default gen_random_uuid(),
+  kind       text not null check (kind in ('income','expense')),
+  label      text not null default '',                 -- 說明（下拉顯示文字）
+  target     text not null default '',                 -- 對象（純標註，可留空）
+  amount     integer check (amount is null or amount >= 0), -- 預填金額，可留空（新增時再填）
+  sort       integer not null default 0,               -- 同類別內的排序
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_fund_presets_kind on public.fund_presets(kind, sort);
+alter table public.fund_presets enable row level security;
+drop policy if exists "fund presets admin only" on public.fund_presets;
+create policy "fund presets admin only" on public.fund_presets
+  for all to authenticated using (true) with check (true);
+-- 初次建立時，帶入原本寫死的兩個預設（之後可在後台自行增刪）：
+do $$
+begin
+  if not exists (select 1 from public.fund_presets) then
+    insert into public.fund_presets (kind, label, target, amount, sort) values
+      ('expense', '買羽球',       '', null, 0),
+      ('income',  '固定成員交錢', '', null, 0);
+  end if;
+end $$;
+
+-- 8) 公積金：整體設定（後台專用，單列 id=1）。目前放「固定成員請假退款金額」。
+create table if not exists public.fund_config (
+  id                  smallint primary key default 1 check (id = 1),
+  leave_refund_amount integer not null default 200 check (leave_refund_amount >= 0),
+  updated_at          timestamptz not null default now()
+);
+alter table public.fund_config enable row level security;
+drop policy if exists "fund config admin only" on public.fund_config;
+create policy "fund config admin only" on public.fund_config
+  for all to authenticated using (true) with check (true);
+insert into public.fund_config (id) values (1) on conflict (id) do nothing;
+
 -- ---------- Row Level Security：完全開放（anon 可讀寫）----------
 alter table public.settings      enable row level security;
 alter table public.members       enable row level security;

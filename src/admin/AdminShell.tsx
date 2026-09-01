@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import BillingPage from "./BillingPage";
+import AdminSettings from "./AdminSettings";
 
 /**
  * 登入後的後台外框。
@@ -65,28 +66,6 @@ function StatsPage({ onGear }: { onGear: () => void }) {
   );
 }
 
-/** 設定頁：跟主 App 一樣，左上角返回鍵、不顯示底部導覽。登出放這裡。 */
-function SettingsPage({ onBack, onLogout }: { onBack: () => void; onLogout: () => void }) {
-  return (
-    <>
-      <div className="topbar">
-        <button className="back" onClick={onBack} aria-label="返回">
-          ‹
-        </button>
-        <div>
-          <h1>設定</h1>
-        </div>
-      </div>
-      <div className="screen no-nav">
-        <Placeholder title="建置中" hint="這裡之後放後台專用的設定選項。" />
-        <button className="btn btn-ghost btn-block" onClick={onLogout}>
-          登出此裝置
-        </button>
-      </div>
-    </>
-  );
-}
-
 function AdminNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
     <nav className="bottomnav">
@@ -113,7 +92,7 @@ export default function AdminShell({ onLogout }: { onLogout: () => void }) {
   if (settings) {
     return (
       <div className="app">
-        <SettingsPage onBack={() => setSettings(false)} onLogout={onLogout} />
+        <AdminSettings onBack={() => setSettings(false)} onLogout={onLogout} />
       </div>
     );
   }
