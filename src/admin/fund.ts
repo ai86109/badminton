@@ -1,6 +1,17 @@
 import { adminSupabase } from "./adminSupabase";
 import { loadAll } from "../db";
-import { compute, todayIso, wd } from "../logic";
+import {
+  attOf,
+  compute,
+  defaultCourts,
+  effectiveSlots,
+  isoAdd,
+  rate,
+  rosterOf,
+  todayIso,
+  wd,
+  weekdayOf,
+} from "../logic";
 import type { AppState, Member } from "../types";
 
 /**
@@ -17,29 +28,87 @@ export interface FundEvent {
   target: string; // 對象（純標註，可留空）
   amount: number; // 一律正數
   auto: boolean;
+  names?: string[]; // 名單（目前用於「固定成員請假退款」）
+  breakdown?: BreakdownLine[]; // 明細：依對象／名單算出的每人金額
+}
+
+/** 明細的一列：verb（收／退）+ who（要用螢光筆強調的人名或群組）+ 是否「每人」+ 金額。 */
+export interface BreakdownLine {
+  verb: string;
+  who: string;
+  per: boolean;
+  amount: number;
 }
 export interface FundData {
   balance: number;
   events: FundEvent[];
 }
 
-/** 過去（date < today）且已鎖定的打球日，其多收金額 → 一筆自動「場地結餘」收入。 */
-function autoSurplusEvents(state: AppState): FundEvent[] {
+/**
+ * 過去（date < today）且已鎖定的打球日，自動拆成最多三筆：
+ *  ① 臨時場地支出：超出季租場地數的部分才算，負值歸零。
+ *     = max(0, 當日場地費總額 − 季租場地數 × 時薪 × 時段數)
+ *  ② 場地費收入：應收，只算「有顯示金額」的非固定成員（compute.grand）。
+ *  ③ 固定成員請假退款：當天請假的固定成員 × 每人退款額（設定可調），可展開看名單。
+ * 每筆金額 > 0 才會產生。
+ */
+function autoDayEvents(state: AppState, leaveRefund: number): FundEvent[] {
   const today = todayIso();
   const out: FundEvent[] = [];
   for (const s of state.sessions) {
     if (s.status !== "play" || !s.locked || s.date >= today) continue;
-    const surplus = compute(state, s).roundSurplus;
-    if (surplus > 0) {
+    const c = compute(state, s);
+    const slots = effectiveSlots(state, s);
+    const r = rate(state.settings);
+    const seasonCount = defaultCourts(state.settings).length;
+    const seasonBaseline = seasonCount * r * slots.length;
+    const tempExpense = Math.max(0, c.feeTotal - seasonBaseline);
+
+    // ② 場地費收入（應收）
+    if (c.grand > 0) {
       out.push({
-        id: `auto:${s.date}`,
+        id: `auto:income:${s.date}`,
         date: s.date,
         kind: "income",
-        label: `場地結餘（週${wd(s.date)}）`,
+        label: `場地費收入`,
         target: "",
-        amount: surplus,
+        amount: c.grand,
         auto: true,
       });
+    }
+    // ① 臨時場地支出
+    if (tempExpense > 0) {
+      out.push({
+        id: `auto:temp:${s.date}`,
+        date: s.date,
+        kind: "expense",
+        label: `臨時場地支出`,
+        target: "",
+        amount: tempExpense,
+        auto: true,
+      });
+    }
+    // ③ 固定成員請假退款
+    //    「固定成員」以「目前」的身分判定（用 state.members），不看當天凍結名單的
+    //    舊 level —— 這樣之後把某人改成非固定，過去的退款也會跟著不再算他。
+    //    請假與否仍讀當天的凍結出席紀錄（attOf 讀 s.attend）。
+    if (leaveRefund > 0) {
+      const allIds = slots.map((x) => x.id);
+      const fixedLeave = state.members.filter(
+        (m) => m.level === "fixed" && attOf(s, m.id, allIds).status === "leave",
+      );
+      if (fixedLeave.length > 0) {
+        out.push({
+          id: `auto:refund:${s.date}`,
+          date: s.date,
+          kind: "expense",
+          label: `固定成員請假退款`,
+          target: "",
+          amount: fixedLeave.length * leaveRefund,
+          auto: true,
+          names: fixedLeave.map((m) => m.name),
+        });
+      }
     }
   }
   return out;
@@ -50,9 +119,64 @@ function byDateDesc(a: FundEvent, b: FundEvent): number {
   return a.auto === b.auto ? 0 : a.auto ? 1 : -1; // 同日：手動排在自動前
 }
 
+// ---- 展開明細（每人金額）----
+const TARGET_GROUPS = ["整隊", "固定成員", "非固定成員"];
+
+/** 某事件日期「當週那一天打球日」的名單；找不到就退回目前成員。 */
+function weekPlayRoster(state: AppState, dateIso: string): Member[] {
+  const pd = isoAdd(dateIso, state.settings.playWeekday - weekdayOf(dateIso));
+  const sess = state.sessions.find((x) => x.date === pd);
+  return sess ? rosterOf(state, sess) : state.members;
+}
+
+/** 群組（整隊／固定成員／非固定成員）在「當週該打球日」的人數。 */
+function groupCount(state: AppState, dateIso: string, group: string): number {
+  const roster = weekPlayRoster(state, dateIso);
+  if (group === "整隊") return roster.length;
+  if (group === "固定成員") return roster.filter((m) => m.level === "fixed").length;
+  if (group === "非固定成員") return roster.filter((m) => m.level !== "fixed").length;
+  return 0;
+}
+
+/**
+ * 一筆事件展開後要顯示的每一列文字：
+ *  - 有名單（自動退款）：每人一列「退 {人名} {總額÷人數}」。
+ *  - 對象是群組：一列「退 {群組} 每人 {總額÷當週該群組人數}」。
+ *  - 對象是多個人名（「、」分隔）：每人一列「退 {人名} {總額÷人數}」。
+ *  - 其他（空的或單一自訂文字）：不展開。
+ */
+export function eventBreakdown(state: AppState, e: FundEvent): BreakdownLine[] {
+  const verb = e.kind === "income" ? "收" : "退"; // 收入用「收」、支出用「退」
+  // 有名單（自動退款）：每人一列
+  if (e.names && e.names.length) {
+    const each = Math.round(e.amount / e.names.length);
+    return e.names.map((n) => ({ verb, who: n, per: false, amount: each }));
+  }
+  const t = (e.target || "").trim();
+  if (!t) return [];
+  // 群組：一列「每人」
+  if (TARGET_GROUPS.includes(t)) {
+    const n = groupCount(state, e.date, t);
+    if (n > 0) return [{ verb, who: t, per: true, amount: Math.round(e.amount / n) }];
+    return [{ verb, who: t, per: false, amount: e.amount }];
+  }
+  // 多個人名：每人一列
+  const names = t
+    .split("、")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (names.length > 1) {
+    const each = Math.round(e.amount / names.length);
+    return names.map((n) => ({ verb, who: n, per: false, amount: each }));
+  }
+  // 單一對象（人名或自訂文字）：一列，全額
+  return [{ verb, who: t, per: false, amount: e.amount }];
+}
+
 export async function loadFund(): Promise<FundData> {
   const state = await loadAll();
-  const auto = autoSurplusEvents(state);
+  const config = await loadFundConfig();
+  const auto = autoDayEvents(state, config.leaveRefund);
 
   let manual: FundEvent[] = [];
   if (adminSupabase) {
@@ -70,6 +194,9 @@ export async function loadFund(): Promise<FundData> {
   }
 
   const events = [...auto, ...manual].sort(byDateDesc);
+  events.forEach((e) => {
+    e.breakdown = eventBreakdown(state, e);
+  });
   const balance = events.reduce((sum, e) => sum + (e.kind === "income" ? e.amount : -e.amount), 0);
   return { balance, events };
 }

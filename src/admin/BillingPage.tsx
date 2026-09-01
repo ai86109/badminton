@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addFundEvent,
   deleteFundEvent,
@@ -19,6 +19,84 @@ function mmdd(iso: string): string {
 }
 function fmtAmt(n: number): string {
   return n.toLocaleString("en-US");
+}
+
+/** 一筆事件（標題＋金額＋刪除＋明細）。明細一律展開，人名／群組用螢光筆強調。 */
+function EventRow({ e, onDel }: { e: FundEvent; onDel: (e: FundEvent) => void }) {
+  const bd = e.breakdown || [];
+  return (
+    <div className="fund-ev-item">
+      <div className="fund-ev">
+        <div className="fund-ev-main">
+          <div className="fund-ev-title">
+            {e.label || (e.kind === "income" ? "收入" : "支出")}
+            <span className={"log-tag " + (e.auto ? "auto" : "manual")}>
+              {e.auto ? "自動" : "手動"}
+            </span>
+          </div>
+        </div>
+        <div className={"fund-ev-amt num " + (e.kind === "income" ? "plus" : "minus")}>
+          {e.kind === "income" ? "+" : "−"}
+          {fmtAmt(e.amount)}
+        </div>
+        {e.auto ? (
+          <span className="fund-ev-sp" />
+        ) : (
+          <button className="fund-ev-del" aria-label="刪除" onClick={() => onDel(e)}>
+            ×
+          </button>
+        )}
+      </div>
+      {bd.length > 0 && (
+        <div className="fund-ev-bd">
+          {bd.map((line, i) => (
+            <div className="fund-ev-bd-l" key={i}>
+              {line.verb} <span className="bd-hl">{line.who}</span>{" "}
+              {line.per ? "每人 " : ""}
+              {fmtAmt(line.amount)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 一天一個區塊：日期 + 當日淨額 + 到當日結餘，底下是當天的事件。 */
+function DayBlock({
+  date,
+  events,
+  net,
+  bal,
+  onDel,
+}: {
+  date: string;
+  events: FundEvent[];
+  net: number;
+  bal: number;
+  onDel: (e: FundEvent) => void;
+}) {
+  return (
+    <div className="fund-day">
+      <div className="fund-day-h">
+        <span className="d num">{mmdd(date)}</span>
+        <span className="rt">
+          <span className={"net num " + (net >= 0 ? "up" : "dn")}>
+            {net >= 0 ? "＋" : "−"}
+            {fmtAmt(Math.abs(net))}
+          </span>
+          <span className="bl num">
+            <span className="lb">結餘</span>${fmtAmt(bal)}
+          </span>
+        </span>
+      </div>
+      <div className="fund-day-rows">
+        {events.map((e) => (
+          <EventRow key={e.id} e={e} onDel={onDel} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function AdminTopbar({ onGear }: { onGear: () => void }) {
@@ -68,6 +146,73 @@ export function BillingView({
   const [comboOpen, setComboOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [del, setDel] = useState<FundEvent | null>(null);
+  const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
+
+  // 依日期分組、算每日/月的結餘，並切成「當月（展開）」與「更早（依年月收合）」。
+  const grouped = useMemo(() => {
+    const evs = data.events; // 新到舊
+    // 每日淨額 → 累積結餘（需由舊到新累加）
+    const asc = [...evs].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const net: Record<string, number> = {};
+    const order: string[] = [];
+    asc.forEach((e) => {
+      if (!(e.date in net)) {
+        net[e.date] = 0;
+        order.push(e.date);
+      }
+      net[e.date] += e.kind === "income" ? e.amount : -e.amount;
+    });
+    let run = 0;
+    const bal: Record<string, number> = {};
+    order.forEach((d) => {
+      run += net[d];
+      bal[d] = run;
+    });
+
+    // 依日分組（保持新到舊）
+    const byDay = new Map<string, FundEvent[]>();
+    evs.forEach((e) => {
+      const a = byDay.get(e.date) || [];
+      a.push(e);
+      byDay.set(e.date, a);
+    });
+
+    const curMonth = todayIso().slice(0, 7);
+    const monthsPresent = new Set([...byDay.keys()].map((d) => d.slice(0, 7)));
+    const latestMonth = order.length ? order[order.length - 1].slice(0, 7) : curMonth;
+    // 當月有事件就展開當月；當月還沒有（例如月初）就改展開最近有紀錄的那個月。
+    const expMonth = monthsPresent.has(curMonth) ? curMonth : latestMonth;
+    const recent: string[] = [];
+    const olderDates: string[] = [];
+    for (const d of byDay.keys()) {
+      if (d.slice(0, 7) >= expMonth) recent.push(d);
+      else olderDates.push(d);
+    }
+
+    // 更早：依「年-月」分組（新到舊），月底結餘＝該月最新一天的結餘
+    const months = new Map<string, { dates: string[]; count: number; bal: number }>();
+    olderDates.forEach((d) => {
+      const m = d.slice(0, 7);
+      const cur = months.get(m) || { dates: [], count: 0, bal: 0 };
+      cur.dates.push(d);
+      cur.count += (byDay.get(d) || []).length;
+      months.set(m, cur);
+    });
+    months.forEach((v) => {
+      v.bal = bal[v.dates[0]] ?? 0;
+    });
+
+    // 依年分組（僅作標題，不收合）
+    const years = new Map<string, string[]>();
+    for (const m of months.keys()) {
+      const y = m.slice(0, 4);
+      const a = years.get(y) || [];
+      a.push(m);
+      years.set(y, a);
+    }
+
+    return { byDay, net, bal, recent, months, years };
+  }, [data.events]);
 
   function openSheet() {
     setKind("expense");
@@ -136,39 +281,84 @@ export function BillingView({
         ＋ 新增事件
       </button>
 
-      <div className="section-h">
-        <h2>事件紀錄</h2>
-      </div>
       {data.events.length ? (
-        <div className="card fund-list">
-          {data.events.map((e) => (
-            <div className="log-row" key={e.id}>
-              <div className="log-date num">{mmdd(e.date)}</div>
-              <div className="log-main">
-                <div className="log-title">
-                  {e.label || (e.kind === "income" ? "收入" : "支出")}
-                  <span className={"log-tag " + (e.auto ? "auto" : "manual")}>
-                    {e.auto ? "自動" : "手動"}
-                  </span>
-                </div>
-                {e.target && <div className="log-sub">對象：{e.target}</div>}
-              </div>
-              <div className={"log-amt num " + (e.kind === "income" ? "plus" : "minus")}>
-                {e.kind === "income" ? "+" : "−"}
-                {fmtAmt(e.amount)}
-              </div>
-              {e.auto ? (
-                <span className="log-del-spacer" />
-              ) : (
-                <button className="log-del" aria-label="刪除" onClick={() => setDel(e)}>
-                  ×
-                </button>
-              )}
+        <>
+          <div className="section-h">
+            <h2>事件紀錄</h2>
+          </div>
+          {grouped.recent.length ? (
+            grouped.recent.map((d) => (
+              <DayBlock
+                key={d}
+                date={d}
+                events={grouped.byDay.get(d) || []}
+                net={grouped.net[d]}
+                bal={grouped.bal[d]}
+                onDel={setDel}
+              />
+            ))
+          ) : (
+            <div className="empty" style={{ marginTop: 8 }}>
+              本月還沒有事件。
             </div>
-          ))}
-        </div>
+          )}
+
+          {grouped.months.size > 0 && (
+            <>
+              <div className="section-h">
+                <h2>更早的紀錄</h2>
+              </div>
+              {[...grouped.years.entries()].map(([y, monthKeys]) => (
+                <div key={y}>
+                  <div className="fund-year">{y} 年</div>
+                  {monthKeys.map((m) => {
+                    const mo = grouped.months.get(m);
+                    if (!mo) return null;
+                    const open = !!openMonths[m];
+                    return (
+                      <div className={"fund-mo" + (open ? " open" : "")} key={m}>
+                        <div
+                          className="fund-mo-h"
+                          onClick={() => setOpenMonths((c) => ({ ...c, [m]: !c[m] }))}
+                        >
+                          <span className="mn">{+m.slice(5, 7)} 月</span>
+                          <span className="meta">{mo.count} 筆</span>
+                          <span className="rt">
+                            <span className="bl num">
+                              <span className="lb">月底結餘</span>${fmtAmt(mo.bal)}
+                            </span>
+                            <span className="cx">{open ? "▾" : "▸"}</span>
+                          </span>
+                        </div>
+                        {open && (
+                          <div className="fund-mo-body">
+                            {mo.dates.map((d) => (
+                              <DayBlock
+                                key={d}
+                                date={d}
+                                events={grouped.byDay.get(d) || []}
+                                net={grouped.net[d]}
+                                bal={grouped.bal[d]}
+                                onDel={setDel}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </>
+          )}
+        </>
       ) : (
-        <div className="empty">還沒有任何事件。打球結算的多收金額會自動累積，也可手動新增。</div>
+        <>
+          <div className="section-h">
+            <h2>事件紀錄</h2>
+          </div>
+          <div className="empty">還沒有任何事件。打球結算的多收金額會自動累積，也可手動新增。</div>
+        </>
       )}
 
       {/* 新增事件 sheet */}
