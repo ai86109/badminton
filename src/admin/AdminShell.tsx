@@ -60,7 +60,7 @@ function StatsPage({ onGear }: { onGear: () => void }) {
     <>
       <AdminTopbar title="統計" onGear={onGear} />
       <div className="screen">
-        <Placeholder title="建置中" hint="這裡之後放出席率、場地費趨勢、每月統計等圖表。" />
+        <Placeholder title="建置中" hint="？？？" />
       </div>
     </>
   );

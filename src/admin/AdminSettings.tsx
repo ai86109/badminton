@@ -56,9 +56,9 @@ export function AdminSettingsView({
         </div>
       </div>
       <div className="screen no-nav">
-        {/* 公積金設定 */}
+        {/* 退款設定 */}
         <div className="card">
-          <div className="clabel">公積金設定</div>
+          <div className="clabel">退款設定</div>
           <div className="field">
             <div className="field-lbl">固定成員請假退款金額</div>
             <div className="money">
@@ -74,7 +74,6 @@ export function AdminSettingsView({
                 onBlur={onCommitConfig}
               />
             </div>
-            <div className="hint">固定成員請假時，從公積金退回的金額（每人每次）。</div>
           </div>
         </div>
 
@@ -83,12 +82,7 @@ export function AdminSettingsView({
           const items = presets.filter((p) => p.kind === key);
           return (
             <div className="card" key={key}>
-              <div className="clabel">預設選項 · {label}</div>
-              {key === "expense" && (
-                <div className="hint" style={{ marginTop: -2, marginBottom: 12 }}>
-                  新增事件時，說明欄的下拉會列出這些選項；「對象」「金額」可先留空，選了之後仍可改。
-                </div>
-              )}
+              <div className="clabel">{label} · 下拉預設選項</div>
               {items.map((p) => (
                 <div className="preset-item" key={p.id}>
                   <div className="preset-top">
