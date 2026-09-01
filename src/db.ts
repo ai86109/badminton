@@ -143,6 +143,7 @@ export async function loadAll(): Promise<AppState> {
       status: s.status,
       // `locked` column may be absent on legacy rows → fall back to "has data".
       locked: !!s.locked || Object.keys(attend).length > 0 || Object.keys(paid).length > 0,
+      seasonRent: s.season_rent === false ? false : true, // 預設季租
       roster: Array.isArray(s.roster) && s.roster.length ? s.roster : undefined,
       slots: stored,
       attend,
@@ -210,10 +211,17 @@ export function applyChanges(prev: AppState, next: AppState): void {
       !p ||
       p.status !== s.status ||
       !!p.locked !== !!s.locked ||
+      (p.seasonRent !== false) !== (s.seasonRent !== false) ||
       JSON.stringify(p.roster ?? null) !== JSON.stringify(rosterVal)
     )
       ops.push(
-        sb.from("sessions").upsert({ date: s.date, status: s.status, locked: !!s.locked, roster: rosterVal }),
+        sb.from("sessions").upsert({
+          date: s.date,
+          status: s.status,
+          locked: !!s.locked,
+          season_rent: s.seasonRent !== false,
+          roster: rosterVal,
+        }),
       );
 
     // slots — only persisted for locked days; unlocked days follow settings live

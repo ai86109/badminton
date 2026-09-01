@@ -60,7 +60,9 @@ function autoDayEvents(state: AppState, leaveRefund: number): FundEvent[] {
     const c = compute(state, s);
     const slots = effectiveSlots(state, s);
     const r = rate(state.settings);
-    const seasonCount = defaultCourts(state.settings).length;
+    // 非季租日：整天沒有季租場地可扣，臨時場地支出＝全部場地費。
+    const seasonRent = s.seasonRent !== false;
+    const seasonCount = seasonRent ? defaultCourts(state.settings).length : 0;
     const seasonBaseline = seasonCount * r * slots.length;
     const tempExpense = Math.max(0, c.feeTotal - seasonBaseline);
 
@@ -88,11 +90,11 @@ function autoDayEvents(state: AppState, leaveRefund: number): FundEvent[] {
         auto: true,
       });
     }
-    // ③ 固定成員請假退款
+    // ③ 固定成員請假退款（只有季租日才退；非季租日固定成員本來就自付，不退款）
     //    「固定成員」以「目前」的身分判定（用 state.members），不看當天凍結名單的
     //    舊 level —— 這樣之後把某人改成非固定，過去的退款也會跟著不再算他。
     //    請假與否仍讀當天的凍結出席紀錄（attOf 讀 s.attend）。
-    if (leaveRefund > 0) {
+    if (seasonRent && leaveRefund > 0) {
       const allIds = slots.map((x) => x.id);
       const fixedLeave = state.members.filter(
         (m) => m.level === "fixed" && attOf(s, m.id, allIds).status === "leave",

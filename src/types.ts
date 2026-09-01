@@ -31,6 +31,12 @@ export interface SessionRec {
    */
   locked?: boolean;
   /**
+   * 這天是否為「季租日」。預設 true（沿用季租）。設為 false＝非季租日：
+   * 當天出席的固定成員也要付場地費（跟非固定一樣顯示金額/收款），
+   * 帳務的臨時場地支出不扣季租場地，且固定成員請假不退款。
+   */
+  seasonRent?: boolean;
+  /**
    * Frozen roster snapshot for a recorded day. Once `locked` and the day has
    * passed, this list (who was on the team, and their level) is fixed, so later
    * adding/removing/renaming members never rewrites a past day's headcount or

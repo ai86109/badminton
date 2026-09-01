@@ -54,6 +54,7 @@ export default function SessionView() {
   if (!s) return null;
 
   const c = compute(state, s);
+  const seasonRent = s.seasonRent !== false; // 預設季租
   const ss = effectiveSlots(state, s);
   const allIds = ss.map((x) => x.id);
   const paidCount = c.paidCount;
@@ -148,6 +149,14 @@ export default function SessionView() {
       delete sess.paid[id];
     });
   }
+  function toggleSeasonRent() {
+    update((st) => {
+      const sess = findSess(st);
+      if (!sess) return;
+      lockSlots(st, sess);
+      sess.seasonRent = sess.seasonRent === false; // 切換：預設季租(true) ↔ 非季租(false)
+    });
+  }
 
   return (
     <>
@@ -165,7 +174,10 @@ export default function SessionView() {
       <div className="screen has-bar">
         {/* 打球時段 */}
         <div className="card">
-          <div className="clabel">打球時段</div>
+          <div className="clabel">
+            打球時段
+            {!seasonRent && <span className="ss-tag">非季租</span>}
+          </div>
           {ss.length ? (
             ss.map((sl) => (
               <div className="slot-blk" key={sl.id}>
@@ -277,7 +289,7 @@ export default function SessionView() {
                   )}
                 </div>
                 <div className="p-right">
-                  {isIn && m.level === "fixed" ? (
+                  {isIn && m.level === "fixed" && seasonRent ? (
                     <div className="p-note">隊費</div>
                   ) : isIn ? (
                     <>
@@ -304,6 +316,24 @@ export default function SessionView() {
             />
             <button className="btn btn-ghost" onClick={addTemp}>
               ＋ 臨時成員
+            </button>
+          </div>
+        </div>
+
+        {/* 季租日切換 */}
+        <div className="card">
+          <div className="clabel">場地性質</div>
+          <div className="season-row">
+            <div className="season-info">
+              <div className="season-cur">{seasonRent ? "季租日" : "非季租日"}</div>
+              <div className="season-hint">
+                {seasonRent
+                  ? "固定成員不另外收費"
+                  : "全部成員都要收費，固定成員請假不退款"}
+              </div>
+            </div>
+            <button className="btn btn-ghost" onClick={toggleSeasonRent}>
+              改為{seasonRent ? "非季租日" : "季租日"}
             </button>
           </div>
         </div>

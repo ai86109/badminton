@@ -311,6 +311,11 @@ export function rosterOf(state: AppState, s: SessionRec): Member[] {
   return s.locked && s.roster && s.roster.length ? s.roster : state.members;
 }
 
+/** 這天是否季租日（預設 true）。 */
+export function isSeasonRent(s: SessionRec): boolean {
+  return s.seasonRent !== false;
+}
+
 /**
  * Keep roster snapshots consistent after any change:
  *  - unlocked days carry no snapshot (they follow the live roster),
@@ -398,11 +403,14 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
     const share = slotFee / here.length;
     here.forEach((m) => (base[m.id] += share));
   });
+  // 季租日：固定成員走隊費不另收；非季租日：固定成員當天也要收費（跟非固定一樣）。
+  const seasonRent = s.seasonRent !== false;
   let allTotal = 0;
   ins.forEach((m) => {
     res.rows[m.id] = ceilMoney(base[m.id]);
     allTotal += res.rows[m.id];
-    if (m.level === "fixed") {
+    const chargeable = m.level !== "fixed" || !seasonRent;
+    if (!chargeable) {
       res.fixedTotal += res.rows[m.id];
       res.fixedCount++;
     } else {
@@ -442,30 +450,33 @@ export function feeDetail(state: AppState, s: SessionRec): string {
   const slotsOf = (m: Member) => new Set(attOf(s, m.id, allIds).slots || []);
   const playsAll = (m: Member) => allIds.every((id) => slotsOf(m).has(id));
 
-  const nonFixed = ins.filter((m) => m.level !== "fixed");
-  const fullNonFixed = nonFixed.filter((m) => playsAll(m));
-  const partialNonFixed = nonFixed.filter((m) => !playsAll(m));
+  // 季租日只收非固定成員；非季租日所有出席者都要收費。
+  const seasonRent = s.seasonRent !== false;
+  const payLabel = seasonRent ? "非固定成員" : ""; // 非季租日大家都收，不加前綴
+  const chargeable = seasonRent ? ins.filter((m) => m.level !== "fixed") : ins.slice();
+  const fullCharge = chargeable.filter((m) => playsAll(m));
+  const partialCharge = chargeable.filter((m) => !playsAll(m));
 
   const lines: string[] = [];
 
-  if (nonFixed.length === 0) {
+  if (chargeable.length === 0) {
     lines.push(`${ins.length}人，全部都是固定成員，無需另外收費`);
-  } else if (partialNonFixed.length === 0) {
+  } else if (partialCharge.length === 0) {
     // 格式 A：全部打滿，金額一致
-    const amt = c.rows[fullNonFixed[0].id] || 0;
-    lines.push(`${ins.length}人，非固定成員每人${fmt(amt)}元`);
+    const amt = c.rows[fullCharge[0].id] || 0;
+    lines.push(`${ins.length}人，${payLabel}每人${fmt(amt)}元`);
   } else {
     // 格式 B：有人只打部分時段
     ss.forEach((sl, i) => {
       const cnt = ins.filter((m) => slotsOf(m).has(sl.id)).length;
       lines.push(`第${cnNum(i + 1)}小時${cnt}人`);
     });
-    if (fullNonFixed.length) {
-      lines.push(`非固定成員每人${fmt(c.rows[fullNonFixed[0].id] || 0)}元`);
+    if (fullCharge.length) {
+      lines.push(`${payLabel}每人${fmt(c.rows[fullCharge[0].id] || 0)}元`);
     }
     // 只打部分時段者：金額相同的併成一行
     const groups = new Map<number, string[]>();
-    partialNonFixed.forEach((m) => {
+    partialCharge.forEach((m) => {
       const amt = c.rows[m.id] || 0;
       if (!groups.has(amt)) groups.set(amt, []);
       groups.get(amt)!.push(m.name);

@@ -42,14 +42,16 @@ create table if not exists public.members (
 
 -- 3) 場次（每天一列；用日期當主鍵。play=打球 / rest=休息）
 create table if not exists public.sessions (
-  date       date primary key,
-  status     text not null default 'play' check (status in ('play','rest')),
-  locked     boolean not null default false,   -- 一旦這天開始點名/改場地就定型，之後改設定不影響它
-  roster     jsonb,                             -- 已記錄場次的成員名單快照；過去的場次凍結，不受之後增減成員影響
-  created_at timestamptz not null default now()
+  date        date primary key,
+  status      text not null default 'play' check (status in ('play','rest')),
+  locked      boolean not null default false,   -- 一旦這天開始點名/改場地就定型，之後改設定不影響它
+  season_rent boolean not null default true,    -- 是否季租日；false=非季租（固定成員當天也收費、支出不扣季租、請假不退款）
+  roster      jsonb,                             -- 已記錄場次的成員名單快照；過去的場次凍結，不受之後增減成員影響
+  created_at  timestamptz not null default now()
 );
 -- 若表已存在（之前建過），補上欄位：
 alter table public.sessions add column if not exists locked boolean not null default false;
+alter table public.sessions add column if not exists season_rent boolean not null default true;
 alter table public.sessions add column if not exists roster jsonb;
 
 -- 4) 時段（場次底下的每個 1 小時時段；id 由前端產生）
