@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { addFundEvent, deleteFundEvent, loadFund, type FundData, type FundEvent } from "./fund";
+import {
+  addFundEvent,
+  deleteFundEvent,
+  loadFund,
+  loadMembers,
+  loadPresets,
+  type FundData,
+  type FundEvent,
+  type FundPreset,
+} from "./fund";
+import { TargetPicker } from "./TargetPicker";
 import { todayIso } from "../logic";
+import type { Member } from "../types";
 
 function mmdd(iso: string): string {
   const p = iso.split("-");
@@ -9,11 +20,6 @@ function mmdd(iso: string): string {
 function fmtAmt(n: number): string {
   return n.toLocaleString("en-US");
 }
-
-const PRESETS: Record<"expense" | "income", string[]> = {
-  expense: ["買羽球"],
-  income: ["固定成員交錢"],
-};
 
 function AdminTopbar({ onGear }: { onGear: () => void }) {
   return (
@@ -34,11 +40,21 @@ function AdminTopbar({ onGear }: { onGear: () => void }) {
 /** 純畫面元件：吃 data + 新增/刪除 callback，自己管 UI 狀態（方便測試/截圖）。 */
 export function BillingView({
   data,
+  presets,
+  members,
   onAdd,
   onDelete,
 }: {
   data: FundData;
-  onAdd: (e: { date: string; kind: "income" | "expense"; label: string; amount: number }) => Promise<void>;
+  presets: FundPreset[];
+  members: Member[];
+  onAdd: (e: {
+    date: string;
+    kind: "income" | "expense";
+    label: string;
+    target: string;
+    amount: number;
+  }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [sheetMounted, setSheetMounted] = useState(false); // 在 DOM 上（含收起動畫期間）
@@ -47,6 +63,7 @@ export function BillingView({
   const [kind, setKind] = useState<"expense" | "income">("expense");
   const [date, setDate] = useState(todayIso());
   const [label, setLabel] = useState("");
+  const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
   const [comboOpen, setComboOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -56,11 +73,20 @@ export function BillingView({
     setKind("expense");
     setDate(todayIso());
     setLabel("");
+    setTarget("");
     setAmount("");
     setComboOpen(false);
     window.clearTimeout(closeTimer.current);
     setSheetMounted(true);
     requestAnimationFrame(() => setSheetShown(true)); // 下一幀才 show → 從底部滑上
+  }
+
+  /** 點預設選項：一次帶入 說明／對象／金額。 */
+  function applyPreset(p: FundPreset) {
+    setLabel(p.label);
+    setTarget(p.target);
+    setAmount(p.amount == null ? "" : String(p.amount));
+    setComboOpen(false);
   }
 
   function closeSheet() {
@@ -74,7 +100,7 @@ export function BillingView({
     if (amt <= 0) return;
     setBusy(true);
     try {
-      await onAdd({ date, kind, label: label.trim(), amount: amt });
+      await onAdd({ date, kind, label: label.trim(), target: target.trim(), amount: amt });
       closeSheet();
     } finally {
       setBusy(false);
@@ -92,7 +118,7 @@ export function BillingView({
     }
   }
 
-  const presets = PRESETS[kind];
+  const kindPresets = presets.filter((p) => p.kind === kind && p.label.trim());
   const delImpact = del ? (del.kind === "income" ? -del.amount : del.amount) : 0;
 
   return (
@@ -125,6 +151,7 @@ export function BillingView({
                     {e.auto ? "自動" : "手動"}
                   </span>
                 </div>
+                {e.target && <div className="log-sub">對象：{e.target}</div>}
               </div>
               <div className={"log-amt num " + (e.kind === "income" ? "plus" : "minus")}>
                 {e.kind === "income" ? "+" : "−"}
@@ -183,24 +210,28 @@ export function BillingView({
                 >
                   ▾
                 </button>
-                {comboOpen && (
+                {comboOpen && kindPresets.length > 0 && (
                   <div className="fund-combo-list">
-                    {presets.map((p) => (
+                    {kindPresets.map((p) => (
                       <button
                         type="button"
-                        key={p}
+                        key={p.id}
                         onMouseDown={(ev) => {
                           ev.preventDefault();
-                          setLabel(p);
-                          setComboOpen(false);
+                          applyPreset(p);
                         }}
                       >
-                        {p}
+                        {p.label}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="fund-fld">
+              <label className="field-lbl">對象</label>
+              <TargetPicker value={target} members={members} onChange={setTarget} />
             </div>
 
             <div className="fund-fld">
@@ -267,6 +298,8 @@ export function BillingView({
 /** 容器：載入資料、處理新增/刪除後重載。 */
 export default function BillingPage({ onGear }: { onGear: () => void }) {
   const [data, setData] = useState<FundData | null>(null);
+  const [presets, setPresets] = useState<FundPreset[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
   async function reload() {
@@ -278,6 +311,16 @@ export default function BillingPage({ onGear }: { onGear: () => void }) {
   }
   useEffect(() => {
     reload();
+    // 預設選項與成員清單載入一次即可（新增事件的下拉會用到）
+    (async () => {
+      try {
+        const [ps, ms] = await Promise.all([loadPresets(), loadMembers()]);
+        setPresets(ps);
+        setMembers(ms);
+      } catch {
+        /* 下拉載不到不影響主要記帳功能 */
+      }
+    })();
   }, []);
 
   return (
@@ -294,6 +337,8 @@ export default function BillingPage({ onGear }: { onGear: () => void }) {
       ) : (
         <BillingView
           data={data}
+          presets={presets}
+          members={members}
           onAdd={async (e) => {
             await addFundEvent(e);
             await reload();

@@ -14,6 +14,7 @@ export interface FundEvent {
   date: string; // YYYY-MM-DD
   kind: "income" | "expense";
   label: string;
+  target: string; // 對象（純標註，可留空）
   amount: number; // 一律正數
   auto: boolean;
 }
@@ -35,6 +36,7 @@ function autoSurplusEvents(state: AppState): FundEvent[] {
         date: s.date,
         kind: "income",
         label: `場地結餘（週${wd(s.date)}）`,
+        target: "",
         amount: surplus,
         auto: true,
       });
@@ -61,6 +63,7 @@ export async function loadFund(): Promise<FundData> {
       date: r.event_date as string,
       kind: r.kind === "expense" ? "expense" : "income",
       label: r.label || "",
+      target: r.target || "",
       amount: Number(r.amount) || 0,
       auto: false,
     }));
@@ -75,12 +78,13 @@ export async function addFundEvent(e: {
   date: string;
   kind: "income" | "expense";
   label: string;
+  target: string;
   amount: number;
 }): Promise<void> {
   if (!adminSupabase) throw new Error("Supabase not configured");
   const { error } = await adminSupabase
     .from("fund_events")
-    .insert({ event_date: e.date, kind: e.kind, label: e.label, amount: e.amount });
+    .insert({ event_date: e.date, kind: e.kind, label: e.label, target: e.target, amount: e.amount });
   if (error) throw error;
 }
 

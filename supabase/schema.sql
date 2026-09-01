@@ -85,10 +85,13 @@ create table if not exists public.fund_events (
   event_date  date not null,
   kind        text not null check (kind in ('income','expense')),
   label       text not null default '',
+  target      text not null default '',                 -- 對象（純標註，可留空）
   amount      integer not null check (amount >= 0),
   created_at  timestamptz not null default now()
 );
 create index if not exists idx_fund_events_date on public.fund_events(event_date);
+-- 若表已存在（之前建過），補上「對象」欄位：
+alter table public.fund_events add column if not exists target text not null default '';
 -- 只有「登入的 admin（authenticated）」能讀寫；匿名（主 App）完全看不到。
 alter table public.fund_events enable row level security;
 drop policy if exists "fund admin only" on public.fund_events;
