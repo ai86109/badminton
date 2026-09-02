@@ -88,8 +88,8 @@
   .sess{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-top:11px;cursor:pointer;transition:border-color .12s;text-align:left;width:100%;}
   .sess:hover{border-color:var(--accent);}
   .sess.rest{background:var(--rest-soft);border-style:dashed;}
-  .date-chip{flex:0 0 auto;width:52px;text-align:center;}
-  .date-chip .d{font-family:var(--font-num);font-size:23px;font-weight:600;line-height:1;color:var(--ink);letter-spacing:-.5px;}
+  .date-chip{flex:0 0 auto;width:62px;text-align:center;}
+  .date-chip .d{font-family:var(--font-num);font-size:21px;font-weight:600;line-height:1;color:var(--ink);letter-spacing:-.5px;white-space:nowrap;}
   .date-chip .w{font-size:11.5px;color:var(--muted);margin-top:3px;}
   .sess.rest .date-chip .d{color:var(--rest);}
   .sess-main{flex:1 1 auto;min-width:0;}
