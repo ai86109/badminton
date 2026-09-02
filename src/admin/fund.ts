@@ -9,7 +9,6 @@ import {
   rate,
   rosterOf,
   todayIso,
-  wd,
   weekdayOf,
 } from "../logic";
 import type { AppState, Member } from "../types";

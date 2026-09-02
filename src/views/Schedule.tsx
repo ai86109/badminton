@@ -10,7 +10,6 @@ import {
   todayIso,
   upcomingList,
   wd,
-  WD,
 } from "../logic";
 
 function SchedCard({ iso }: { iso: string }) {

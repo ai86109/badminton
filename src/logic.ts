@@ -364,8 +364,6 @@ export interface Computed {
   inCount: number;
   leaveCount: number;
   per: number;
-  fixedTotal: number;
-  fixedCount: number;
   collectCount: number;
   paidCount: number;
   roundSurplus: number;
@@ -379,8 +377,6 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
     inCount: 0,
     leaveCount: 0,
     per: 0,
-    fixedTotal: 0,
-    fixedCount: 0,
     collectCount: 0,
     paidCount: 0,
     roundSurplus: 0,
@@ -409,11 +405,9 @@ export function compute(state: AppState, s: SessionRec | null): Computed {
   ins.forEach((m) => {
     res.rows[m.id] = ceilMoney(base[m.id]);
     allTotal += res.rows[m.id];
+    // 季租日的固定成員走隊費、不列入收費；其餘（非固定，或非季租日的固定）都要收。
     const chargeable = m.level !== "fixed" || !seasonRent;
-    if (!chargeable) {
-      res.fixedTotal += res.rows[m.id];
-      res.fixedCount++;
-    } else {
+    if (chargeable) {
       res.grand += res.rows[m.id];
       res.collectCount++;
       if (s.paid[m.id]) res.paidCount++;
@@ -536,39 +530,6 @@ export function ctxOpen(state: AppState, s: SessionRec): Record<string, any> {
     請假人數: lv.length,
     請假名單: lv.map((m) => m.name).join("、"),
     _leave: lv.length > 0,
-  };
-}
-export function ctxFee(state: AppState, s: SessionRec): Record<string, any> {
-  const c = compute(state, s);
-  const ss = effectiveSlots(state, s);
-  const allIds = ss.map((x) => x.id);
-  const ins = rosterOf(state, s).filter((m) => attOf(s, m.id, allIds).status === "in");
-  const detail = ins
-    .map((m) => {
-      if (m.level === "fixed") return "・" + m.name + "（隊費）";
-      const a = attOf(s, m.id, allIds);
-      let note = "";
-      if (ss.length > 1 && (a.slots || []).length < ss.length)
-        note =
-          "（" +
-          ss
-            .filter((sl) => a.slots.indexOf(sl.id) >= 0)
-            .map((sl) => slotLabel(sl.start))
-            .join("、") +
-          "）";
-      return (s.paid[m.id] ? "✅ " : "⬜ ") + m.name + "　$" + fmt(c.rows[m.id]) + note;
-    })
-    .join("\n");
-  return {
-    日期: mmdd(s.date),
-    星期: wd(s.date),
-    費用摘要: "場地費 $" + fmt(c.feeTotal),
-    場地費: fmt(c.feeTotal),
-    人數: c.inCount,
-    收費明細: detail,
-    合計: fmt(c.grand),
-    結餘: fmt(c.roundSurplus),
-    _surplus: c.roundSurplus,
   };
 }
 export function sampleCtx(state: AppState, kind: "open" | "fee"): Record<string, any> {

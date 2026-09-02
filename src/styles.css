@@ -345,12 +345,10 @@
 .fund-bal-amt{font-family:var(--font-num);font-size:42px;font-weight:600;letter-spacing:-1.5px;line-height:1.1;margin-top:8px;color:var(--ink);}
 .fund-bal-amt .cur{font-size:22px;color:var(--muted);margin-right:3px;letter-spacing:0;}
 
-.fund-list{padding:4px 16px;}
-.log-item{border-top:1px solid var(--border-soft);}
-.log-item:first-child{border-top:none;}
-.log-row{display:flex;align-items:center;gap:12px;padding:12px 0;}
-.log-breakdown{padding:2px 0 12px 54px;}
-.log-bd-row{font-size:13.5px;color:var(--ink-strong);padding:4px 0;}
+/* 事件標籤（自動／手動）— 仍用於 EventRow */
+.log-tag{font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;}
+.log-tag.auto{background:#eadfd0;color:var(--accent-ink);}
+.log-tag.manual{background:var(--surface-2);color:var(--muted);}
 /* 螢光筆效果：只塗中間帶狀，像真的用麥克筆畫過人名／群組 */
 .bd-hl{
   font-weight:600;
@@ -358,18 +356,6 @@
   background:linear-gradient(180deg,transparent 12%,#f6df9c 12%,#f6df9c 82%,transparent 82%);
   border-radius:2px;
 }
-.log-date{flex:0 0 auto;width:42px;font-size:13px;color:var(--muted);font-weight:600;text-align:center;letter-spacing:-.5px;}
-.log-main{flex:1 1 auto;min-width:0;}
-.log-title{font-size:14.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
-.log-tag{font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;}
-.log-tag.auto{background:#eadfd0;color:var(--accent-ink);}
-.log-tag.manual{background:var(--surface-2);color:var(--muted);}
-.log-amt{flex:0 0 auto;font-size:15px;font-weight:600;letter-spacing:-.5px;}
-.log-amt.plus{color:#3f8f57;}
-.log-amt.minus{color:#b3523c;}
-.log-del{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:none;background:transparent;color:var(--faint);font-size:18px;cursor:pointer;display:grid;place-items:center;}
-.log-del:hover{background:var(--surface-2);color:var(--warn);}
-.log-del-spacer{flex:0 0 auto;width:28px;height:28px;}
 
 /* ===== 事件紀錄：分日區塊 ===== */
 .fund-day{background:var(--surface);border:1px solid var(--border);border-radius:13px;margin-top:11px;overflow:hidden;}
