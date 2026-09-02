@@ -394,6 +394,28 @@
 .fund-mo-h .cx{color:var(--muted);font-size:11px;width:16px;text-align:center;}
 .fund-mo-body{padding:0 12px 12px;background:var(--bg);border-top:1px solid var(--border);}
 
+/* ===== 統計頁 ===== */
+.stat-sub{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11px;font-weight:600;color:var(--muted);}
+.stat-seg{margin-left:auto;letter-spacing:0;text-transform:none;}
+.stat-seg button{min-width:30px;}
+.stat-h{font-size:13px;font-weight:600;color:var(--ink-strong);margin:6px 0 2px;display:flex;align-items:center;}
+.stat-legend{margin-left:auto;display:flex;gap:12px;text-transform:none;letter-spacing:0;}
+.stat-legend.r{margin-left:auto;}
+.stat-legend .lg{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);}
+.stat-legend .lg i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+.stat-svg{width:100%;height:auto;display:block;overflow:visible;}
+.stat-svg .stat-axis{fill:var(--muted);font-size:9.5px;font-family:var(--font-num);}
+.stat-svg .stat-val{fill:var(--ink-strong);font-size:9.5px;font-weight:600;font-family:var(--font-num);}
+.stat-empty{font-size:13.5px;color:var(--muted);padding:10px 2px;}
+.rank-list{display:flex;flex-direction:column;gap:12px;}
+.rank-row{display:flex;flex-direction:column;gap:5px;}
+.rank-head{display:flex;align-items:center;gap:8px;}
+.rank-name{font-size:14px;font-weight:600;color:var(--ink);}
+.rank-fig{margin-left:auto;font-size:14px;font-weight:700;color:var(--accent-ink);}
+.rank-fig small{font-size:11px;font-weight:600;color:var(--faint);}
+.rank-track{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;}
+.rank-fill{height:100%;border-radius:5px;background:var(--accent);}
+
 .lvseg.seg2{width:100%;}
 .lvseg.seg2 button{flex:1;padding:9px 0;font-size:14px;}
 .lvseg.seg2 button.on{color:var(--accent-ink);}

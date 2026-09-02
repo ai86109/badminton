@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import BillingPage from "./BillingPage";
 import AdminSettings from "./AdminSettings";
+import StatsPage from "./StatsPage";
 
 /**
  * 登入後的後台外框。
@@ -27,44 +28,6 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: "billing", label: "帳務", icon: IconBilling },
   { key: "stats", label: "統計", icon: IconStats },
 ];
-
-/** 分頁的頂列：admin icon + 標題 + 右上角齒輪（進入設定）。 */
-function AdminTopbar({ title, onGear }: { title: string; onGear: () => void }) {
-  return (
-    <div className="topbar">
-      <div className="logo">
-        <img src="/admin-apple-touch-icon.png" alt="羽球後台" />
-      </div>
-      <div>
-        <h1>{title}</h1>
-      </div>
-      <button className="gear" onClick={onGear} aria-label="設定" title="設定">
-        ⚙️
-      </button>
-    </div>
-  );
-}
-
-/** 空頁的暫時內容，之後把功能填進來。 */
-function Placeholder({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div className="card">
-      <div className="clabel">{title}</div>
-      <p style={{ margin: 0, fontSize: 14, color: "var(--muted)", lineHeight: 1.7 }}>{hint}</p>
-    </div>
-  );
-}
-
-function StatsPage({ onGear }: { onGear: () => void }) {
-  return (
-    <>
-      <AdminTopbar title="統計" onGear={onGear} />
-      <div className="screen">
-        <Placeholder title="建置中" hint="？？？" />
-      </div>
-    </>
-  );
-}
 
 function AdminNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
