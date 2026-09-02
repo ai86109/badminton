@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { produce } from "immer";
 import type { AppState, UIState } from "./types";
 import { normalizeRosters } from "./logic";
 import { applyChanges, loadAll, subscribeRealtime } from "./db";
@@ -119,10 +120,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     lastWrite.current = Date.now();
     setState((prev) => {
       if (!prev) return prev;
-      const next = structuredClone(prev) as AppState;
-      mutator(next);
-      normalizeRosters(next);
-      return next;
+      // Immer 的 produce：只複製有改到的分支（結構共享），比 structuredClone 全量深拷貝省很多；
+      // 所有變動都在 draft 上進行，回傳一份新的不可變狀態。
+      return produce(prev, (draft) => {
+        mutator(draft as AppState);
+        normalizeRosters(draft as AppState);
+      });
     });
   }, []);
 
