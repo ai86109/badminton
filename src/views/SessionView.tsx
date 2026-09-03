@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "../store";
+import { useManager } from "../manager";
 import {
   attOf,
   buildFeeNotice,
@@ -45,6 +46,7 @@ async function copyText(text: string, ok: () => void) {
 
 export default function SessionView() {
   const { state, update, ui, setUi, toast } = useStore();
+  const isManager = useManager();
   const [tempName, setTempName] = useState("");
   const s = ui.openId ? sessById(state, ui.openId) : null;
 
@@ -171,7 +173,7 @@ export default function SessionView() {
           <p>{headSpan}</p>
         </div>
       </div>
-      <div className="screen has-bar">
+      <div className={"screen " + (isManager ? "has-bar" : "no-nav")}>
         {/* 打球時段 */}
         <div className="card">
           <div className="clabel">
@@ -188,31 +190,40 @@ export default function SessionView() {
                   {(sl.courts || [])
                     .map((cn, ci) => ({ cn, ci }))
                     .sort((a, b) => (parseInt(a.cn, 10) || 0) - (parseInt(b.cn, 10) || 0))
-                    .map(({ cn, ci }) => (
-                      <span className="court-chip" key={ci}>
-                        <input
-                          className="court-in num"
-                          type="text"
-                          inputMode="numeric"
-                          aria-label="場地號碼"
-                          value={cn}
-                          onChange={(e) => editCourt(sl.id, ci, e.target.value)}
-                        />
-                        <span className="court-suffix">號</span>
-                        {(sl.courts || []).length > 1 && (
-                          <button
-                            className="court-x"
-                            aria-label="移除場地"
-                            onClick={() => delCourt(sl.id, ci)}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                  <button className="add-court" onClick={() => addCourt(sl.id)}>
-                    ＋ 加場地
-                  </button>
+                    .map(({ cn, ci }) =>
+                      isManager ? (
+                        <span className="court-chip" key={ci}>
+                          <input
+                            className="court-in num"
+                            type="text"
+                            inputMode="numeric"
+                            aria-label="場地號碼"
+                            value={cn}
+                            onChange={(e) => editCourt(sl.id, ci, e.target.value)}
+                          />
+                          <span className="court-suffix">號</span>
+                          {(sl.courts || []).length > 1 && (
+                            <button
+                              className="court-x"
+                              aria-label="移除場地"
+                              onClick={() => delCourt(sl.id, ci)}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="court-chip" key={ci}>
+                          <span className="court-in num">{cn}</span>
+                          <span className="court-suffix">號</span>
+                        </span>
+                      ),
+                    )}
+                  {isManager && (
+                    <button className="add-court" onClick={() => addCourt(sl.id)}>
+                      ＋ 加場地
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -221,18 +232,20 @@ export default function SessionView() {
               尚未安排時段，到設定裡調整預設時段就會自動帶進來。
             </div>
           )}
-          <div className="notice-btn-wrap">
-            <button
-              className="btn btn-ghost btn-block"
-              onClick={() =>
-                copyText(buildNotice(state.settings.tplOpen, ctxOpen(state, s)), () =>
-                  toast("場地通知已複製"),
-                )
-              }
-            >
-              📢 複製場地通知
-            </button>
-          </div>
+          {isManager && (
+            <div className="notice-btn-wrap">
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={() =>
+                  copyText(buildNotice(state.settings.tplOpen, ctxOpen(state, s)), () =>
+                    toast("場地通知已複製"),
+                  )
+                }
+              >
+                📢 複製場地通知
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 今天誰來 */}
@@ -294,12 +307,14 @@ export default function SessionView() {
                   ) : isIn ? (
                     <>
                       <div className="p-amt num">{fmt(c.rows[m.id] || 0)}</div>
-                      <span
-                        className={"paybtn " + (s.paid[m.id] ? "paid" : "")}
-                        onClick={() => togglePaid(m.id)}
-                      >
-                        {s.paid[m.id] ? "已收" : "未收"}
-                      </span>
+                      {isManager && (
+                        <span
+                          className={"paybtn " + (s.paid[m.id] ? "paid" : "")}
+                          onClick={() => togglePaid(m.id)}
+                        >
+                          {s.paid[m.id] ? "已收" : "未收"}
+                        </span>
+                      )}
                     </>
                   ) : null}
                 </div>
@@ -321,44 +336,48 @@ export default function SessionView() {
         </div>
 
         {/* 季租日切換 */}
-        <div className="card">
-          <div className="clabel">場地性質</div>
-          <div className="season-row">
-            <div className="season-info">
-              <div className="season-cur">{seasonRent ? "季租日" : "非季租日"}</div>
-              <div className="season-hint">
-                {seasonRent
-                  ? "固定成員不另外收費"
-                  : "全部成員都要收費，固定成員請假不退款"}
+        {isManager && (
+          <div className="card">
+            <div className="clabel">場地性質</div>
+            <div className="season-row">
+              <div className="season-info">
+                <div className="season-cur">{seasonRent ? "季租日" : "非季租日"}</div>
+                <div className="season-hint">
+                  {seasonRent
+                    ? "固定成員不另外收費"
+                    : "全部成員都要收費，固定成員請假不退款"}
+                </div>
               </div>
+              <button className="btn btn-ghost" onClick={toggleSeasonRent}>
+                改為{seasonRent ? "非季租日" : "季租日"}
+              </button>
             </div>
-            <button className="btn btn-ghost" onClick={toggleSeasonRent}>
-              改為{seasonRent ? "非季租日" : "季租日"}
-            </button>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* action bar */}
-      <div className="actionbar">
-        <div className="actionbar-inner bar-row">
-          <button
-            className="btn btn-solid bar-cta"
-            onClick={() =>
-              copyText(buildFeeNotice(state, s), () => toast("收款通知已複製"))
-            }
-          >
-            💰 複製收款通知
-          </button>
-          <div className="bar-stat">
-            <div className="k">已收 / 應收</div>
-            <div className="v num">
-              {paidCount}
-              <small> / {c.collectCount} 人</small>
+      {/* action bar（收款區塊）：只有管理者看得到 */}
+      {isManager && (
+        <div className="actionbar">
+          <div className="actionbar-inner bar-row">
+            <button
+              className="btn btn-solid bar-cta"
+              onClick={() =>
+                copyText(buildFeeNotice(state, s), () => toast("收款通知已複製"))
+              }
+            >
+              💰 複製收款通知
+            </button>
+            <div className="bar-stat">
+              <div className="k">已收 / 應收</div>
+              <div className="v num">
+                {paidCount}
+                <small> / {c.collectCount} 人</small>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

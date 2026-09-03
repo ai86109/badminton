@@ -103,6 +103,14 @@
   .slot-lines{display:flex;flex-direction:column;gap:3px;}
   .sess.rest{cursor:default;}
   .sess.rest:hover{border-color:var(--border);}
+  /* 未登入者看到的「已結束」卡片：像休息卡片一樣灰掉、不可點、無箭頭 */
+  .sess.locked{background:var(--rest-soft);border-style:dashed;cursor:default;}
+  .sess.locked:hover{border-color:var(--border);}
+  .sess.locked .date-chip .d,
+  .sess.locked .sl-t,
+  .sess.locked .sl-c,
+  .sess.locked .att-badge b,
+  .sess.locked .att-badge span{color:var(--rest);}
   .rest-label{font-size:15px;font-weight:600;color:var(--rest);}
   .slot-line{display:flex;align-items:baseline;gap:8px;font-size:13px;}
   .sl-t{color:var(--muted);font-family:var(--font-num);font-variant-numeric:tabular-nums;}

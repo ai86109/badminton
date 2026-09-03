@@ -1,4 +1,5 @@
 import { useStore } from "../store";
+import { useManager } from "../manager";
 import {
   compute,
   daySlotLines,
@@ -12,7 +13,7 @@ import {
   wd,
 } from "../logic";
 
-function SchedCard({ iso }: { iso: string }) {
+function SchedCard({ iso, locked }: { iso: string; locked?: boolean }) {
   const { state, update, setUi } = useStore();
   const r = sessById(state, iso);
   const att = r ? compute(state, r).inCount : state.members.length;
@@ -23,8 +24,8 @@ function SchedCard({ iso }: { iso: string }) {
     });
     setUi({ view: "session", openId: iso });
   }
-  return (
-    <button className="sess" onClick={open}>
+  const inner = (
+    <>
       <div className="date-chip">
         <div className="d num">{mmdd(iso)}</div>
         <div className="w">週{wd(iso)}</div>
@@ -43,6 +44,15 @@ function SchedCard({ iso }: { iso: string }) {
         <b className="num">{att}</b>
         <span>出席</span>
       </div>
+    </>
+  );
+  // 未登入者的「已結束」卡片：灰掉、不可點、無箭頭。
+  if (locked) {
+    return <div className="sess locked">{inner}</div>;
+  }
+  return (
+    <button className="sess" onClick={open}>
+      {inner}
       <div className="sess-arrow">›</div>
     </button>
   );
@@ -64,6 +74,7 @@ function RestCard({ iso }: { iso: string }) {
 
 export default function Schedule() {
   const { state, setUi } = useStore();
+  const isManager = useManager();
   const ups = upcomingList(state, 6);
   const past = pastPlays(state, 2);
 
@@ -84,9 +95,11 @@ export default function Schedule() {
         </button>
       </div>
       <div className="screen">
-        <button className="btn btn-solid btn-block" onClick={openCalendar}>
-          編輯日曆
-        </button>
+        {isManager && (
+          <button className="btn btn-solid btn-block" onClick={openCalendar}>
+            編輯日曆
+          </button>
+        )}
         <div className="section-h">
           <h2>即將到來</h2>
         </div>
@@ -101,7 +114,7 @@ export default function Schedule() {
               <h2>已結束</h2>
             </div>
             {past.map((iso) => (
-              <SchedCard iso={iso} key={iso} />
+              <SchedCard iso={iso} key={iso} locked={!isManager} />
             ))}
           </>
         )}
