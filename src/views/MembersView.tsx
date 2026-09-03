@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../store";
+import { useManager } from "../manager";
 import { uid } from "../logic";
 import type { Level } from "../types";
 
@@ -39,6 +40,7 @@ function NameField({ value, onChange }: { value: string; onChange: (v: string) =
 
 export default function MembersView() {
   const { state, update } = useStore();
+  const isManager = useManager();
   const [name, setName] = useState("");
   const [level, setLevel] = useState<Level>("fixed");
 
@@ -86,41 +88,52 @@ export default function MembersView() {
             隊員<span className="r">{state.members.length} 人 （固定 {cn.fixed} · 非固定 {cn.floating}）</span>
           </div>
           {ms.length ? (
-            ms.map((m) => (
-              <div className="mrow" key={m.id}>
-                <NameField value={m.name} onChange={(v) => rename(m.id, v)} />
-                <div className="lvseg">
-                  <button className={m.level === "fixed" ? "on" : ""} onClick={() => setLvl(m.id, "fixed")}>
-                    固定
-                  </button>
-                  <button className={m.level !== "fixed" ? "on" : ""} onClick={() => setLvl(m.id, "floating")}>
-                    非固定
+            ms.map((m) =>
+              isManager ? (
+                <div className="mrow" key={m.id}>
+                  <NameField value={m.name} onChange={(v) => rename(m.id, v)} />
+                  <div className="lvseg">
+                    <button className={m.level === "fixed" ? "on" : ""} onClick={() => setLvl(m.id, "fixed")}>
+                      固定
+                    </button>
+                    <button className={m.level !== "fixed" ? "on" : ""} onClick={() => setLvl(m.id, "floating")}>
+                      非固定
+                    </button>
+                  </div>
+                  <button className="icon-btn" aria-label="移除" onClick={() => del(m.id)}>
+                    ×
                   </button>
                 </div>
-                <button className="icon-btn" aria-label="移除" onClick={() => del(m.id)}>
-                  ×
-                </button>
-              </div>
-            ))
+              ) : (
+                <div className="mrow" key={m.id}>
+                  <div className="mname-ro">{m.name}</div>
+                  <span className={"lvtag " + (m.level === "fixed" ? "fixed" : "")}>
+                    {m.level === "fixed" ? "固定" : "非固定"}
+                  </span>
+                </div>
+              ),
+            )
           ) : (
-            <div className="empty">還沒有成員，先在下面加入。</div>
+            <div className="empty">{isManager ? "還沒有成員，先在下面加入。" : "還沒有成員。"}</div>
           )}
-          <div className="add-row">
-            <input
-              type="text"
-              placeholder="新成員名字"
-              autoComplete="off"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <select value={level} onChange={(e) => setLevel(e.target.value as Level)}>
-              <option value="fixed">固定</option>
-              <option value="floating">非固定</option>
-            </select>
-            <button className="btn btn-solid" onClick={add}>
-              加入
-            </button>
-          </div>
+          {isManager && (
+            <div className="add-row">
+              <input
+                type="text"
+                placeholder="新成員名字"
+                autoComplete="off"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <select value={level} onChange={(e) => setLevel(e.target.value as Level)}>
+                <option value="fixed">固定</option>
+                <option value="floating">非固定</option>
+              </select>
+              <button className="btn btn-solid" onClick={add}>
+                加入
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
