@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useStore } from "../store";
+import { managerLogin, managerLogout, useManager } from "../manager";
 import {
   buildNotice,
   endTime,
@@ -11,6 +12,62 @@ import {
   WD,
 } from "../logic";
 
+/** 未登入時的設定頁：只有一顆「登入」按鈕，點了才展開密碼輸入。 */
+function ManagerLoginCard() {
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!pw || busy) return;
+    setBusy(true);
+    setErr(null);
+    const r = await managerLogin(pw);
+    setBusy(false);
+    if (!r.ok) {
+      setErr(r.reason === "config" ? "尚未設定管理者帳號。" : "密碼錯誤，請再試一次。");
+      setPw("");
+      return;
+    }
+    // 成功後 useManager 會讓外層切換到已登入內容。
+  }
+
+  if (!open) {
+    return (
+      <button
+        className="btn btn-solid btn-block"
+        style={{ marginTop: 13 }}
+        onClick={() => {
+          setOpen(true);
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+      >
+        登入
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={submit} style={{ marginTop: 13 }}>
+      <div className="field-lbl">管理者密碼</div>
+      <input
+        ref={inputRef}
+        type="password"
+        value={pw}
+        autoComplete="current-password"
+        placeholder="輸入密碼"
+        onChange={(e) => setPw(e.target.value)}
+      />
+      {err && <div className="login-err">{err}</div>}
+      <button type="submit" className="btn btn-solid btn-block" style={{ marginTop: 12 }} disabled={busy}>
+        {busy ? "登入中…" : "登入"}
+      </button>
+    </form>
+  );
+}
+
 const OPEN_TOKENS = ["日期", "星期", "時段清單", "出席人數", "出席名單", "請假人數", "請假名單"];
 
 // 24 小時制時間選項（每 30 分鐘一個），讓起始與結束時間顯示一致，不受手機 12/24 制影響。
@@ -21,6 +78,7 @@ for (let h = 0; h < 24; h++) {
 
 export default function SettingsView() {
   const { state, update, setUi } = useStore();
+  const isManager = useManager();
   const st = state.settings;
   const slots = st.defaultSlots.slice().sort();
   const openRef = useRef<HTMLTextAreaElement>(null);
@@ -53,6 +111,10 @@ export default function SettingsView() {
         </div>
       </div>
       <div className="screen no-nav">
+        {!isManager ? (
+          <ManagerLoginCard />
+        ) : (
+          <>
         {/* 固定打球日 */}
         <div className="card">
           <div className="clabel">打球日</div>
@@ -269,6 +331,13 @@ export default function SettingsView() {
             ↺ 回復預設模板
           </button>
         </div>
+
+        {/* 登出 */}
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 13 }} onClick={() => managerLogout()}>
+          登出
+        </button>
+          </>
+        )}
       </div>
     </>
   );
